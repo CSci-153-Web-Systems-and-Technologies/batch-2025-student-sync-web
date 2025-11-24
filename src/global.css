@@ -1,0 +1,32 @@
+:root {
+    --bg: #f6f2f2;
+    --card: #ffffff;
+    --muted: #9b9b9b;
+    --accent: #0b1320;
+    --soft: #f1efef;
+}
+
+* {
+    box-sizing: border-box
+}
+
+body,
+html,
+#root {
+    height: 100%
+}
+
+body {
+    margin: 0;
+    font-family: Inter, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial;
+    background: var(--bg);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 32px;
+}
+
+.page {
+    width: 100%;
+    max-width: 420px
+}
