@@ -63,20 +63,28 @@ function Overview() {
 
 function ProfileManagement() {
     return (
-        <div className={styles.profileCard}>
-            <h3>Profile Information</h3>
-            <p className={styles.muted}>Update your personal information and contact details</p>
-            <div className={styles.formRow}>
-                <div className={styles.field}><label>First Name</label><input defaultValue="Luisito Jr." /></div>
-                <div className={styles.field}><label>Last Name</label><input defaultValue="Libardo" /></div>
-            </div>
-            <div className={styles.dividerLine}></div>
-            <div className={styles.formRow}>
-                <div className={styles.field}><label>Email</label><input defaultValue="libardoluisito123@gmail.com" /></div>
-                <div className={styles.field}><label>Phone</label><input defaultValue="+63 963 119 0422" /></div>
-            </div>
-            <div className={styles.field}><label>Address</label><input defaultValue="Brgy. Linao, Inopacan, Leyte, Philippines" /></div>
-            <div className={styles.field}><label>Emergency Contact</label><input defaultValue="+63 985 567 7277" /></div>
+        <div className={styles.overviewGrid}>
+            <section className={styles.profileCard}>
+                <h3>Profile Information</h3>
+                <p className={styles.muted}>Update your personal information and contact details</p>
+                <div className={styles.formRow}>
+                    <div className={styles.field}><label>First Name</label><input defaultValue="Luisito Jr." /></div>
+                    <div className={styles.field}><label>Last Name</label><input defaultValue="Libardo" /></div>
+                </div>
+                <div className={styles.dividerLine}></div>
+                <div className={styles.formRow}>
+                    <div className={styles.field}><label>Email</label><input defaultValue="libardoluisito123@gmail.com" /></div>
+                    <div className={styles.field}><label>Phone</label><input defaultValue="+63 963 119 0422" /></div>
+                </div>
+                <div className={styles.field}><label>Address</label><input defaultValue="Brgy. Linao, Inopacan, Leyte, Philippines" /></div>
+                <div className={styles.field}><label>Emergency Contact</label><input defaultValue="+63 985 567 7277" /></div>
+            </section>
+
+            <aside className={styles.sideCol}>
+                <div className={styles.smallCard}></div>
+                <div className={styles.smallCard}></div>
+                <div className={styles.smallCard}></div>
+            </aside>
         </div>
     )
 }
