@@ -1,11 +1,11 @@
 import React, { useState } from 'react'
 import styles from './StudentDashboard.module.css'
 
-function Topbar() {
+function Topbar({ onLogout }) {
     return (
         <header className={styles.topbar}>
             <div className={styles.brand}>Student Portal</div>
-            <div className={styles.user}>Welcome, Luisito <button className={styles.logout}>Logout</button></div>
+            <div className={styles.user}>Welcome, Luisito <button className={styles.logout} onClick={() => onLogout && onLogout()}>Logout</button></div>
         </header>
     )
 }
@@ -67,16 +67,16 @@ function ProfileManagement() {
             <h3>Profile Information</h3>
             <p className={styles.muted}>Update your personal information and contact details</p>
             <div className={styles.formRow}>
-                <div className={styles.field}><label>First Name</label><input defaultValue="Luisito Jr."/></div>
-                <div className={styles.field}><label>Last Name</label><input defaultValue="Libardo"/></div>
+                <div className={styles.field}><label>First Name</label><input defaultValue="Luisito Jr." /></div>
+                <div className={styles.field}><label>Last Name</label><input defaultValue="Libardo" /></div>
             </div>
             <div className={styles.dividerLine}></div>
             <div className={styles.formRow}>
-                <div className={styles.field}><label>Email</label><input defaultValue="libardoluisito123@gmail.com"/></div>
-                <div className={styles.field}><label>Phone</label><input defaultValue="+63 963 119 0422"/></div>
+                <div className={styles.field}><label>Email</label><input defaultValue="libardoluisito123@gmail.com" /></div>
+                <div className={styles.field}><label>Phone</label><input defaultValue="+63 963 119 0422" /></div>
             </div>
-            <div className={styles.field}><label>Address</label><input defaultValue="Brgy. Linao, Inopacan, Leyte, Philippines"/></div>
-            <div className={styles.field}><label>Emergency Contact</label><input defaultValue="+63 985 567 7277"/></div>
+            <div className={styles.field}><label>Address</label><input defaultValue="Brgy. Linao, Inopacan, Leyte, Philippines" /></div>
+            <div className={styles.field}><label>Emergency Contact</label><input defaultValue="+63 985 567 7277" /></div>
         </div>
     )
 }
@@ -112,11 +112,11 @@ function AcademicInfo() {
     )
 }
 
-export default function StudentDashboard() {
+export default function StudentDashboard({ onLogout }) {
     const [tab, setTab] = useState('Overview')
     return (
         <div className={styles.container}>
-            <Topbar />
+            <Topbar onLogout={onLogout} />
             <main className={styles.main}>
                 <h1 className={styles.welcome}>Welcome, Luisito</h1>
                 <p className={styles.subtitle}>Manage your student profile and academic information</p>
