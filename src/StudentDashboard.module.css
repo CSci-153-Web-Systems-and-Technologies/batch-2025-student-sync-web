@@ -1,0 +1,54 @@
+.container{
+  width:100%;
+}
+.topbar{
+  display:flex;justify-content:space-between;align-items:center;padding:14px 6px;border-bottom:1px solid rgba(0,0,0,0.06);
+}
+.brand{font-weight:700}
+.user{display:flex;align-items:center;gap:12px}
+.logout{background:#eef3f7;border:1px solid rgba(0,0,0,0.06);padding:6px 10px;border-radius:8px}
+.main{padding:22px}
+.welcome{margin:0;font-size:24px}
+.subtitle{color:#6e6b6b;margin:8px 0 18px}
+.tabs{display:flex;gap:8px;background:#e9e6e6;padding:8px;border-radius:999px;max-width:820px}
+.tab{flex:1;border:none;padding:10px;border-radius:999px;background:transparent;cursor:pointer}
+.tabActive{flex:1;border:none;padding:10px;border-radius:999px;background:#fff;box-shadow:inset 0 -1px 0 rgba(0,0,0,0.04);font-weight:600}
+.section{margin-top:18px}
+
+.overviewGrid{display:grid;grid-template-columns:1fr 320px;gap:20px;align-items:start}
+.cardLarge{background:linear-gradient(180deg,#fff,#faf8f8);padding:14px;border-radius:10px;border:1px solid rgba(0,0,0,0.06)}
+.cardHeader{font-weight:600;margin-bottom:12px}
+.idCard{display:flex;align-items:center;gap:18px;padding:18px;border-radius:8px;border:1px solid rgba(0,0,0,0.06);background:#fff}
+.avatar{width:72px;height:72px;border-radius:50%;background:linear-gradient(135deg,#122230,#0b1320);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700}
+.idInfo{flex:1}
+.name{font-weight:700}
+.course{color:#777}
+.idno{color:#666;margin-top:6px}
+.qr{width:92px;height:92px;border:1px dashed #ccc;display:flex;align-items:center;justify-content:center;border-radius:6px}
+
+.sideCol{display:flex;flex-direction:column;gap:12px}
+.smallCard{background:#fff;border-radius:8px;padding:12px;border:1px solid rgba(0,0,0,0.06)}
+.cardLabel{color:#777;font-size:13px}
+.gpa{font-size:28px;font-weight:700}
+.cardValue{font-weight:700}
+
+.profileCard{background:#fff;padding:18px;border-radius:10px;border:1px solid rgba(0,0,0,0.06)}
+.muted{color:#7a7777}
+.formRow{display:flex;gap:12px;margin-top:12px}
+.field{flex:1;display:flex;flex-direction:column;gap:6px}
+.field input{height:38px;border-radius:8px;border:1px solid rgba(0,0,0,0.06);padding:6px 10px}
+.dividerLine{height:1px;background:linear-gradient(90deg,#ddd,#f7f7f7);margin:12px 0}
+
+.academicGrid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:18px}
+.infoCard{background:#fff;border-radius:8px;padding:14px;border:1px solid rgba(0,0,0,0.06)}
+.detailsList dt{color:#666;float:left;width:120px}
+.detailsList dd{margin:0 0 8px 130px;font-weight:600}
+.actions{display:flex;flex-direction:column;gap:8px;margin-top:12px}
+.actionBtn{padding:10px;border-radius:8px;border:1px solid rgba(0,0,0,0.06);background:transparent;text-align:left}
+.qrLarge{width:140px;height:140px;border:1px dashed #ccc;border-radius:10px;display:flex;align-items:center;justify-content:center;margin:12px 0}
+.downloadBtn{padding:8px 10px;border-radius:8px;border:1px solid rgba(0,0,0,0.06);background:#fff}
+
+@media (max-width:980px){
+  .overviewGrid{grid-template-columns:1fr;}
+  .academicGrid{grid-template-columns:1fr}
+}
