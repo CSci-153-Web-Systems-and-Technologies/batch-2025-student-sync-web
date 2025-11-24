@@ -14,8 +14,11 @@ export default function App() {
     return (
         <div className="page">
             <div className="card" role="main">
-                <h2 className="title">Welcome</h2>
-
+                <div className="brand">
+                    <div className="logo">SI</div>
+                    <h2 className="title">Welcome</h2>
+                    <div className="subtitle">Student ID & Profile Management</div>
+                </div>
                 <div className="tabs">
                     <button className={tab === 'login' ? 'active' : ''} onClick={() => setTab('login')}>Login</button>
                     <button className={tab === 'signup' ? 'active' : ''} onClick={() => setTab('signup')}>Sign up</button>
