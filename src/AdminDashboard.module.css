@@ -1,7 +1,7 @@
 /* Admin Dashboard styles (flat CSS for CSS Modules) */
 .container {
     width: 100%;
-    background: #f5f3f3;
+    background: linear-gradient(135deg, #f5f7fa 0%, #e9ecef 100%);
     min-height: 100vh;
 }
 
@@ -9,9 +9,13 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 14px 24px;
-    background: #fff;
+    padding: 16px 32px;
+    background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
     border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+    position: sticky;
+    top: 0;
+    z-index: 100;
 }
 
 .brand {
@@ -34,11 +38,20 @@
 
 .logout {
     border: 1px solid rgba(0, 0, 0, 0.1);
-    padding: 6px 14px;
-    border-radius: 6px;
-    background: #fff;
+    padding: 8px 18px;
+    border-radius: 8px;
+    background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
     cursor: pointer;
     font-size: 13px;
+    font-weight: 500;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.logout:hover {
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    transform: translateY(-1px);
 }
 
 .main {
@@ -67,13 +80,20 @@
 }
 
 .statCard {
-    background: #fff;
-    border: 1px solid rgba(0, 0, 0, 0.08);
-    border-radius: 12px;
-    padding: 18px;
+    background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+    border: 1px solid rgba(0, 0, 0, 0.06);
+    border-radius: 16px;
+    padding: 24px;
     display: flex;
     justify-content: space-between;
     align-items: center;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+    transition: all 0.3s ease;
+}
+
+.statCard:hover {
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+    transform: translateY(-4px);
 }
 
 .statInfo {
@@ -110,26 +130,33 @@
 .tab {
     flex: 1;
     border: none;
-    padding: 10px 16px;
-    border-radius: 8px;
+    padding: 12px 20px;
+    border-radius: 10px;
     background: transparent;
     cursor: pointer;
     white-space: nowrap;
     font-size: 13px;
     min-width: fit-content;
+    transition: all 0.3s ease;
+    font-weight: 500;
+}
+
+.tab:hover {
+    background: rgba(255, 255, 255, 0.5);
 }
 
 .tabActive {
     flex: 1;
     border: none;
-    padding: 10px 16px;
-    border-radius: 8px;
-    background: #fff;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+    padding: 12px 20px;
+    border-radius: 10px;
+    background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
     font-weight: 600;
     white-space: nowrap;
     font-size: 13px;
     min-width: fit-content;
+    transition: all 0.3s ease;
 }
 
 .section {
@@ -137,10 +164,11 @@
 }
 
 .contentSection {
-    background: #fff;
-    border-radius: 12px;
-    padding: 24px;
-    border: 1px solid rgba(0, 0, 0, 0.08);
+    background: linear-gradient(135deg, #ffffff 0%, #fefefe 100%);
+    border-radius: 16px;
+    padding: 32px;
+    border: 1px solid rgba(0, 0, 0, 0.06);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.08);
 }
 
 .sectionHeader {
@@ -168,25 +196,42 @@
 }
 
 .primaryBtn {
-    background: #0b1320;
+    background: linear-gradient(135deg, #1a2332 0%, #0b1320 100%);
     color: #fff;
     border: none;
-    padding: 10px 20px;
-    border-radius: 8px;
+    padding: 12px 24px;
+    border-radius: 10px;
     cursor: pointer;
-    font-size: 13px;
+    font-size: 14px;
     font-weight: 600;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 12px rgba(11, 19, 32, 0.25);
+}
+
+.primaryBtn:hover {
+    background: linear-gradient(135deg, #2a3342 0%, #1a2332 100%);
+    box-shadow: 0 6px 20px rgba(11, 19, 32, 0.35);
+    transform: translateY(-2px);
 }
 
 .secondaryBtn {
-    background: transparent;
+    background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
     color: #0b1320;
-    border: 1px solid rgba(0, 0, 0, 0.1);
-    padding: 10px 20px;
-    border-radius: 8px;
+    border: 1px solid rgba(0, 0, 0, 0.12);
+    padding: 12px 24px;
+    border-radius: 10px;
     cursor: pointer;
     font-size: 13px;
     font-weight: 500;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+.secondaryBtn:hover {
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    border-color: rgba(0, 0, 0, 0.18);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    transform: translateY(-2px);
 }
 
 .searchBox {
@@ -195,12 +240,21 @@
 
 .searchBox input {
     width: 100%;
-    height: 44px;
-    border-radius: 8px;
-    border: 1px solid rgba(0, 0, 0, 0.08);
-    padding: 0 16px;
+    height: 48px;
+    border-radius: 12px;
+    border: 1px solid rgba(0, 0, 0, 0.1);
+    padding: 0 20px;
     font-size: 14px;
-    background: #fafafa;
+    background: linear-gradient(135deg, #ffffff 0%, #fafafa 100%);
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+
+.searchBox input:focus {
+    outline: none;
+    border-color: #0b1320;
+    box-shadow: 0 4px 16px rgba(11, 19, 32, 0.12);
+    background: #ffffff;
 }
 
 .programGrid {
@@ -210,10 +264,17 @@
 }
 
 .programCard {
-    background: #f8f8f8;
-    border: 1px solid rgba(0, 0, 0, 0.06);
-    border-radius: 10px;
-    padding: 20px;
+    background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    border-radius: 14px;
+    padding: 24px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+    transition: all 0.3s ease;
+}
+
+.programCard:hover {
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+    transform: translateY(-4px);
 }
 
 .programCard h4 {
@@ -223,10 +284,17 @@
 }
 
 .degreeCard {
-    background: #f8f8f8;
-    border: 1px solid rgba(0, 0, 0, 0.06);
-    border-radius: 10px;
-    padding: 20px;
+    background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    border-radius: 14px;
+    padding: 24px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+    transition: all 0.3s ease;
+}
+
+.degreeCard:hover {
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+    transform: translateY(-4px);
 }
 
 .degreeHeader {
@@ -307,10 +375,17 @@
 
 /* Faculty Management Styles */
 .facultyCard {
-    background: #f8f8f8;
-    border: 1px solid rgba(0, 0, 0, 0.06);
-    border-radius: 10px;
-    padding: 20px;
+    background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    border-radius: 14px;
+    padding: 24px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+    transition: all 0.3s ease;
+}
+
+.facultyCard:hover {
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+    transform: translateY(-4px);
 }
 
 .facultyHeader {
@@ -431,16 +506,20 @@
 
 .actionBtnSecondary {
     padding: 10px;
-    background: #fff;
-    border: 1px solid rgba(0, 0, 0, 0.08);
-    border-radius: 8px;
+    background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+    border: 1px solid rgba(0, 0, 0, 0.1);
+    border-radius: 10px;
     cursor: pointer;
     font-size: 13px;
     font-weight: 500;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
 }
 
 .actionBtnSecondary:hover {
-    background: #f5f5f5;
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    transform: translateY(-2px);
 }
 
 .programCard h4 {
@@ -467,13 +546,23 @@
 
 .viewBtn {
     width: 100%;
-    padding: 10px;
-    background: #fff;
-    border: 1px solid rgba(0, 0, 0, 0.08);
-    border-radius: 8px;
+    padding: 12px;
+    background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+    border: 1px solid rgba(0, 0, 0, 0.1);
+    border-radius: 10px;
     cursor: pointer;
     font-size: 13px;
-    font-weight: 500;
+    font-weight: 600;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06);
+}
+
+.viewBtn:hover {
+    background: linear-gradient(135deg, #0b1320 0%, #1a2332 100%);
+    color: #ffffff;
+    border-color: #0b1320;
+    box-shadow: 0 4px 12px rgba(11, 19, 32, 0.2);
+    transform: translateY(-2px);
 }
 
 .secondaryStats {
