@@ -274,7 +274,7 @@ function AppWithSupabase() {
         }
     }
 
-    // Show login/signup forms if not authenticated
+    // Show login/signup forms or landing if not authenticated
     return (
         <div className="page">
             <div className="card">
@@ -284,62 +284,108 @@ function AppWithSupabase() {
                     <p className="subtitle">Your Academic Portal</p>
                 </div>
 
-                <div className="tabs">
-                    <button
-                        className={tab === 'signin' ? 'active' : ''}
-                        onClick={() => {
-                            setTab('signin')
-                            setError(null)
-                        }}
-                    >
-                        Sign In
-                    </button>
-                    <button
-                        className={tab === 'signup' ? 'active' : ''}
-                        onClick={() => {
-                            setTab('signup')
-                            setError(null)
-                        }}
-                    >
-                        Sign Up
-                    </button>
-                </div>
-
-                {error && (
-                    <div style={{
-                        padding: '12px',
-                        background: '#fee',
-                        border: '1px solid #fcc',
-                        borderRadius: '8px',
-                        color: '#c00',
-                        fontSize: '14px',
-                        marginBottom: '16px'
-                    }}>
-                        {error}
-                    </div>
-                )}
-
-                {tab === 'signin' ? (
-                    <>
-                        <LoginForm onSubmit={handleSignIn} loading={authLoading} onGoogle={handleGoogleSignIn} onForgot={() => setForgotOpen(true)} />
-                        <div style={{ marginTop: 12, textAlign: 'center' }}>
-                            <div className="divider"><span>or</span></div>
-                            <div style={{ marginTop: 10 }}>
-                                <OAuthButton onClick={handleGoogleSignIn}>Continue with Google</OAuthButton>
+                {tab === 'landing' ? (
+                    <div className="landing">
+                        <div className="landing-hero">
+                            <div className="hero-text">
+                                <h2>Make academic life easier</h2>
+                                <p className="muted">Student Sync centralizes registration, announcements, and academic records — fast and secure.</p>
+                                <div className="landing-cta">
+                                    <button className="primary" onClick={() => { setTab('signin'); setError(null) }}>Sign In</button>
+                                    <button className="secondary" onClick={() => { setTab('signup'); setError(null) }}>Create Account</button>
+                                </div>
+                                <div style={{ marginTop: 12 }}>
+                                    <OAuthButton onClick={handleGoogleSignIn}>Continue with Google</OAuthButton>
+                                </div>
+                            </div>
+                            <div className="hero-visual">
+                                <div className="card-visual">
+                                    <svg width="220" height="140" viewBox="0 0 220 140" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                        <rect x="6" y="6" width="208" height="128" rx="12" fill="#f8fafc" stroke="#eef2f6" />
+                                        <circle cx="44" cy="44" r="18" fill="#0b1320" opacity="0.9" />
+                                        <rect x="78" y="28" width="112" height="20" rx="6" fill="#eaf0ff" />
+                                        <rect x="78" y="56" width="88" height="16" rx="6" fill="#f3f6fb" />
+                                        <rect x="78" y="80" width="64" height="12" rx="6" fill="#f3f6fb" />
+                                    </svg>
+                                </div>
                             </div>
                         </div>
-                    </>
+
+                        <div className="landing-features">
+                            <div className="feature-item">
+                                <h4>📚 Centralized Records</h4>
+                                <p className="muted">All student and course data in one place.</p>
+                            </div>
+                            <div className="feature-item">
+                                <h4>🔔 Announcements</h4>
+                                <p className="muted">Broadcast messages to students and faculty instantly.</p>
+                            </div>
+                            <div className="feature-item">
+                                <h4>⚙️ Admin Tools</h4>
+                                <p className="muted">Manage programs, courses, and academic events.</p>
+                            </div>
+                        </div>
+                    </div>
                 ) : (
-                    <SignupForm onSubmit={handleSignUp} loading={authLoading} />
+                    <>
+                        <div className="tabs">
+                            <button
+                                className={tab === 'signin' ? 'active' : ''}
+                                onClick={() => {
+                                    setTab('signin')
+                                    setError(null)
+                                }}
+                            >
+                                Sign In
+                            </button>
+                            <button
+                                className={tab === 'signup' ? 'active' : ''}
+                                onClick={() => {
+                                    setTab('signup')
+                                    setError(null)
+                                }}
+                            >
+                                Sign Up
+                            </button>
+                        </div>
+
+                        {error && (
+                            <div style={{
+                                padding: '12px',
+                                background: '#fee',
+                                border: '1px solid #fcc',
+                                borderRadius: '8px',
+                                color: '#c00',
+                                fontSize: '14px',
+                                marginBottom: '16px'
+                            }}>
+                                {error}
+                            </div>
+                        )}
+
+                        {tab === 'signin' ? (
+                            <>
+                                <LoginForm onSubmit={handleSignIn} loading={authLoading} onGoogle={handleGoogleSignIn} onForgot={() => setForgotOpen(true)} />
+                                <div style={{ marginTop: 12, textAlign: 'center' }}>
+                                    <div className="divider"><span>or</span></div>
+                                    <div style={{ marginTop: 10 }}>
+                                        <OAuthButton onClick={handleGoogleSignIn}>Continue with Google</OAuthButton>
+                                    </div>
+                                </div>
+                            </>
+                        ) : (
+                            <SignupForm onSubmit={handleSignUp} loading={authLoading} />
+                        )}
+
+                        <ForgotPasswordModal open={forgotOpen} onClose={() => setForgotOpen(false)} onSubmit={handleForgotPassword} loading={forgotLoading} />
+
+                        <p className="muted" style={{ marginTop: '16px' }}>
+                            {tab === 'signin'
+                                ? "Don't have an account? Click Sign Up above."
+                                : "Already have an account? Click Sign In above."}
+                        </p>
+                    </>
                 )}
-
-                <ForgotPasswordModal open={forgotOpen} onClose={() => setForgotOpen(false)} onSubmit={handleForgotPassword} loading={forgotLoading} />
-
-                <p className="muted" style={{ marginTop: '16px' }}>
-                    {tab === 'signin'
-                        ? "Don't have an account? Click Sign Up above."
-                        : "Already have an account? Click Sign In above."}
-                </p>
             </div>
         </div>
     )
