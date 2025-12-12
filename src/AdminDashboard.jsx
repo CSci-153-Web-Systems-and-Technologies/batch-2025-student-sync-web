@@ -1,6 +1,15 @@
 import React, { useState } from 'react'
 import styles from './AdminDashboard.module.css'
 import { useAuth, useDegreePrograms, useFaculty, useStudents, useCourses } from './hooks/useSupabase'
+import {
+    degreePrograms as apiDegreePrograms,
+    courses as apiCourses,
+    auth as apiAuth,
+    students as apiStudents,
+    faculty as apiFaculty,
+    announcements as apiAnnouncements,
+    calendarEvents as apiCalendar
+} from './supabase'
 
 function Topbar({ name, onLogout }) {
     return (
@@ -69,6 +78,33 @@ function StatCards({ totals }) {
 }
 
 function DegreePrograms({ programs = [] }) {
+    const handleAddProgram = async () => {
+        const name = window.prompt('Program name')
+        if (!name) return
+        try {
+            const { data, error } = await apiDegreePrograms.createProgram({ name })
+            if (error) throw error
+            alert('Program created')
+            window.location.reload()
+        } catch (e) {
+            alert('Error creating program: ' + (e.message || e))
+        }
+    }
+
+    const handleImportPrograms = async () => {
+        const json = window.prompt('Paste JSON array of programs')
+        if (!json) return
+        try {
+            const arr = JSON.parse(json)
+            for (const p of arr) {
+                await apiDegreePrograms.createProgram(p)
+            }
+            alert('Imported programs')
+            window.location.reload()
+        } catch (e) {
+            alert('Import failed: ' + (e.message || e))
+        }
+    }
     return (
         <div className={styles.contentSection}>
             <div className={styles.sectionHeader}>
@@ -77,8 +113,8 @@ function DegreePrograms({ programs = [] }) {
                     <p className={styles.muted}>Click on any program to view all students enrolled in that degree program</p>
                 </div>
                 <div className={styles.headerActions}>
-                    <button className={styles.secondaryBtn}>Import Programs</button>
-                    <button className={styles.primaryBtn}>Add Programs</button>
+                    <button className={styles.secondaryBtn} onClick={handleImportPrograms}>Import Programs</button>
+                    <button className={styles.primaryBtn} onClick={handleAddProgram}>Add Programs</button>
                 </div>
             </div>
             <div className={styles.programGrid}>
@@ -101,6 +137,35 @@ function DegreePrograms({ programs = [] }) {
 }
 
 function CourseManagement({ courses = [] }) {
+    const handleAddCourse = async () => {
+        const name = window.prompt('Course name')
+        if (!name) return
+        const code = window.prompt('Course code (e.g. CS101)') || ''
+        const credits = window.prompt('Credits') || '3'
+        try {
+            const { data, error } = await apiCourses.createCourse({ name, code, credits: parseInt(credits, 10) })
+            if (error) throw error
+            alert('Course created')
+            window.location.reload()
+        } catch (e) {
+            alert('Error creating course: ' + (e.message || e))
+        }
+    }
+
+    const handleImportCourses = async () => {
+        const json = window.prompt('Paste JSON array of courses')
+        if (!json) return
+        try {
+            const arr = JSON.parse(json)
+            for (const c of arr) {
+                await apiCourses.createCourse(c)
+            }
+            alert('Imported courses')
+            window.location.reload()
+        } catch (e) {
+            alert('Import failed: ' + (e.message || e))
+        }
+    }
 
     return (
         <div className={styles.contentSection}>
@@ -141,8 +206,8 @@ function CourseManagement({ courses = [] }) {
                     <p className={styles.muted}>Click on any course to view detailed information and manage enrollments</p>
                 </div>
                 <div className={styles.headerActions}>
-                    <button className={styles.secondaryBtn}>Import Courses</button>
-                    <button className={styles.primaryBtn}>Add Courses</button>
+                    <button className={styles.secondaryBtn} onClick={handleImportCourses}>Import Courses</button>
+                    <button className={styles.primaryBtn} onClick={handleAddCourse}>Add Courses</button>
                 </div>
             </div>
             <div className={styles.searchBox}>
@@ -171,6 +236,36 @@ function CourseManagement({ courses = [] }) {
 }
 
 function StudentManagement({ students = [] }) {
+    const handleAddStudent = async () => {
+        const email = window.prompt('Student email')
+        if (!email) return
+        const first_name = window.prompt('First name') || ''
+        const last_name = window.prompt('Last name') || ''
+        try {
+            const { data, error } = await apiStudents.createStudent({ email, first_name, last_name })
+            if (error) throw error
+            alert('Student created')
+            window.location.reload()
+        } catch (e) {
+            alert('Error creating student: ' + (e.message || e))
+        }
+    }
+
+    const handleImportStudents = async () => {
+        const json = window.prompt('Paste JSON array of students')
+        if (!json) return
+        try {
+            const arr = JSON.parse(json)
+            for (const s of arr) {
+                await apiStudents.createStudent(s)
+            }
+            alert('Imported students')
+            window.location.reload()
+        } catch (e) {
+            alert('Import failed: ' + (e.message || e))
+        }
+    }
+
     return (
         <div className={styles.contentSection}>
             <div className={styles.sectionHeader}>
@@ -178,7 +273,10 @@ function StudentManagement({ students = [] }) {
                     <h3>🎓 Student Management</h3>
                     <p className={styles.muted}>Search and manage student records</p>
                 </div>
-                <button className={styles.primaryBtn}>Add Student</button>
+                <div className={styles.headerActions}>
+                    <button className={styles.secondaryBtn} onClick={handleImportStudents}>Import Students</button>
+                    <button className={styles.primaryBtn} onClick={handleAddStudent}>Add Student</button>
+                </div>
             </div>
             <div className={styles.searchBox}>
                 <input placeholder="🔍 Search students..." />
@@ -223,6 +321,36 @@ function StudentManagement({ students = [] }) {
 }
 
 function FacultyManagement({ faculty = [] }) {
+    const handleAddFaculty = async () => {
+        const email = window.prompt('Faculty email')
+        if (!email) return
+        const first_name = window.prompt('First name') || ''
+        const last_name = window.prompt('Last name') || ''
+        try {
+            const { data, error } = await apiFaculty.createFaculty({ email, first_name, last_name })
+            if (error) throw error
+            alert('Faculty created')
+            window.location.reload()
+        } catch (e) {
+            alert('Error creating faculty: ' + (e.message || e))
+        }
+    }
+
+    const handleImportFaculty = async () => {
+        const json = window.prompt('Paste JSON array of faculty members')
+        if (!json) return
+        try {
+            const arr = JSON.parse(json)
+            for (const f of arr) {
+                await apiFaculty.createFaculty(f)
+            }
+            alert('Imported faculty')
+            window.location.reload()
+        } catch (e) {
+            alert('Import failed: ' + (e.message || e))
+        }
+    }
+
     return (
         <div className={styles.contentSection}>
             <div className={styles.sectionHeader}>
@@ -230,7 +358,10 @@ function FacultyManagement({ faculty = [] }) {
                     <h3>👨‍🏫 Faculty Management</h3>
                     <p className={styles.muted}>Manage faculty members and their course assignments</p>
                 </div>
-                <button className={styles.primaryBtn}>Add Faculty</button>
+                <div className={styles.headerActions}>
+                    <button className={styles.secondaryBtn} onClick={handleImportFaculty}>Import Faculty</button>
+                    <button className={styles.primaryBtn} onClick={handleAddFaculty}>Add Faculty</button>
+                </div>
             </div>
             <div className={styles.searchBox}>
                 <input placeholder="🔍 Search faculty..." />
@@ -296,6 +427,20 @@ function FacultyManagement({ faculty = [] }) {
 }
 
 function Communications() {
+    const handleCreateAnnouncement = async () => {
+        const title = window.prompt('Announcement title')
+        if (!title) return
+        const content = window.prompt('Message body') || ''
+        const audience = window.prompt('Target audience (all, faculty, course:<code>, program:<id>)') || 'all'
+        try {
+            const { data, error } = await apiAnnouncements.createAnnouncement({ title, content, target_audience: audience, published_at: new Date().toISOString(), is_active: true })
+            if (error) throw error
+            alert('Announcement created')
+            window.location.reload()
+        } catch (e) {
+            alert('Error creating announcement: ' + (e.message || e))
+        }
+    }
     return (
         <div className={styles.contentSection}>
             <div className={styles.communicationsGrid}>
@@ -342,7 +487,7 @@ function Communications() {
                             </div>
                         </div>
 
-                        <button className={styles.createAnnouncementBtn}>✉️ Create New Announcement</button>
+                        <button className={styles.createAnnouncementBtn} onClick={handleCreateAnnouncement}>✉️ Create New Announcement</button>
                     </div>
                 </div>
 
@@ -404,7 +549,21 @@ function Communications() {
                 <p className={styles.muted}>Manage important dates and academic events</p>
 
                 <div className={styles.calendarActions}>
-                    <button className={styles.secondaryBtn}>➕ Add Academic Event</button>
+                    <button className={styles.secondaryBtn} onClick={async () => {
+                        const title = window.prompt('Event title')
+                        if (!title) return
+                        const start_date = window.prompt('Start date (YYYY-MM-DD)') || ''
+                        const end_date = window.prompt('End date (YYYY-MM-DD)') || start_date
+                        const description = window.prompt('Description') || ''
+                        try {
+                            const { data, error } = await apiCalendar.createEvent({ title, start_date, end_date, description })
+                            if (error) throw error
+                            alert('Event created')
+                            window.location.reload()
+                        } catch (e) {
+                            alert('Error creating event: ' + (e.message || e))
+                        }
+                    }}>➕ Add Academic Event</button>
                     <button className={styles.secondaryBtn}>📅 Exam Schedule</button>
                     <button className={styles.secondaryBtn}>📆 Academic Deadlines</button>
                 </div>

@@ -165,6 +165,16 @@ export const students = {
         return { data, error }
     },
 
+    // Create student (admin only)
+    createStudent: async (studentData) => {
+        const { data, error } = await supabase
+            .from('students')
+            .insert(studentData)
+            .select()
+            .single()
+        return { data, error }
+    },
+
     // Get student dashboard stats
     getStudentStats: async (studentId) => {
         const { data, error } = await supabase
@@ -216,6 +226,17 @@ export const faculty = {
             .from('faculty')
             .update(updates)
             .eq('id', facultyId)
+            .select()
+            .single()
+        return { data, error }
+    }
+
+    ,
+    // Create faculty (admin only)
+    createFaculty: async (facultyData) => {
+        const { data, error } = await supabase
+            .from('faculty')
+            .insert(facultyData)
             .select()
             .single()
         return { data, error }
