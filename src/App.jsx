@@ -1,16 +1,34 @@
 import React, { useState } from 'react'
+import StudentDashboard from './StudentDashboard'
+import AdminDashboard from './AdminDashboard'
 
-function Field({ label, placeholder, type = 'text' }) {
+function Field({ label, placeholder, type = 'text', value, onChange }) {
     return (
         <div className="field">
             <label>{label}</label>
-            <input type={type} placeholder={placeholder} />
+            <input type={type} placeholder={placeholder} value={value} onChange={onChange} />
         </div>
     )
 }
 
 export default function App() {
     const [tab, setTab] = useState('login')
+    const [signedIn, setSignedIn] = useState(false)
+    const [userRole, setUserRole] = useState('Student')
+    const [loginRole, setLoginRole] = useState('Student')
+
+    if (signedIn) {
+        return (
+            <div className="page">
+                {userRole === 'Admin' ? (
+                    <AdminDashboard onLogout={() => setSignedIn(false)} />
+                ) : (
+                    <StudentDashboard onLogout={() => setSignedIn(false)} />
+                )}
+            </div>
+        )
+    }
+
     return (
         <div className="page">
             <div className="card" role="main">
@@ -25,36 +43,36 @@ export default function App() {
                 </div>
 
                 {tab === 'login' ? (
-                    <form className="form">
+                    <form className="form" onSubmit={(e) => { e.preventDefault(); setUserRole(loginRole); setSignedIn(true); }}>
                         <Field label="Username" placeholder="Enter your username" />
                         <Field label="Password" placeholder="Enter your password" type="password" />
                         <div className="field">
                             <label>Login as</label>
-                            <select>
+                            <select value={loginRole} onChange={(e) => setLoginRole(e.target.value)}>
                                 <option>Student</option>
                                 <option>Admin</option>
                             </select>
                         </div>
-                        <button type="button" className="primary">Sign in</button>
+                        <button type="submit" className="primary">Sign in</button>
                         <div className="muted">Forgot your password?</div>
                         <div className="divider"><span>or</span></div>
                         <button type="button" className="alt">Continue with Google</button>
                         <label className="agree"><input type="checkbox" /> By continuing, you agree to our Terms of Service and Privacy Policy.</label>
                     </form>
                 ) : (
-                    <form className="form">
+                    <form className="form" onSubmit={(e) => { e.preventDefault(); setUserRole(loginRole); setSignedIn(true); }}>
                         <Field label="Username" placeholder="Choose a username" />
                         <Field label="Email" placeholder="Enter your email" type="email" />
                         <Field label="Password" placeholder="Create a password" type="password" />
                         <Field label="Confirm password" placeholder="Confirm your password" type="password" />
                         <div className="field">
                             <label>Login as</label>
-                            <select>
+                            <select value={loginRole} onChange={(e) => setLoginRole(e.target.value)}>
                                 <option>Student</option>
                                 <option>Admin</option>
                             </select>
                         </div>
-                        <button type="button" className="primary">Sign up</button>
+                        <button type="submit" className="primary">Sign up</button>
                         <div className="divider"><span>or</span></div>
                         <button type="button" className="alt">Continue with Google</button>
                         <label className="agree"><input type="checkbox" /> By continuing, you agree to our Terms of Service and Privacy Policy.</label>
