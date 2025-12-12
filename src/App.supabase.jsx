@@ -2,6 +2,7 @@ import React, { useState } from 'react'
 import { useAuth } from './hooks/useSupabase'
 import StudentDashboardWithSupabase from './StudentDashboard.supabase'
 import AdminDashboard from './AdminDashboard'
+import FacultyDashboardWithSupabase from './FacultyDashboard.supabase'
 import AuthGuard from './components/AuthGuard'
 import OAuthButton from './components/OAuthButton'
 import ForgotPasswordModal from './components/ForgotPasswordModal'
@@ -261,15 +262,10 @@ function AppWithSupabase() {
                 </AuthGuard>
             )
         } else if (userRole === 'faculty') {
-            // TODO: Create FacultyDashboard component
             return (
-                <div className="page">
-                    <div className="card">
-                        <h2>Faculty Dashboard</h2>
-                        <p>Coming soon...</p>
-                        <button onClick={handleLogout}>Logout</button>
-                    </div>
-                </div>
+                <AuthGuard>
+                    <FacultyDashboardWithSupabase onLogout={handleLogout} />
+                </AuthGuard>
             )
         }
     }
