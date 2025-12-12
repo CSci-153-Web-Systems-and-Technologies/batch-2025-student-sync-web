@@ -33,7 +33,9 @@ export function useAuth() {
         loading,
         signIn: auth.signIn,
         signUp: auth.signUp,
-        signOut: auth.signOut
+        signOut: auth.signOut,
+        signInWithProvider: auth.signInWithProvider,
+        sendPasswordReset: auth.sendPasswordReset
     }
 }
 

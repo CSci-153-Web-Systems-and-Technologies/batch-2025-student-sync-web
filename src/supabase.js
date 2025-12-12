@@ -41,6 +41,18 @@ export const auth = {
         return { data, error }
     },
 
+    // Sign in with OAuth provider (Google, etc.)
+    signInWithProvider: async (provider) => {
+        const { data, error } = await supabase.auth.signInWithOAuth({ provider })
+        return { data, error }
+    },
+
+    // Send password reset email
+    sendPasswordReset: async (email, options = {}) => {
+        const { data, error } = await supabase.auth.resetPasswordForEmail(email, options)
+        return { data, error }
+    },
+
     // Sign out
     signOut: async () => {
         const { error } = await supabase.auth.signOut()

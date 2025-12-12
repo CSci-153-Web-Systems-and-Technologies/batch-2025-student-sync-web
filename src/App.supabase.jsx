@@ -2,6 +2,9 @@ import React, { useState } from 'react'
 import { useAuth } from './hooks/useSupabase'
 import StudentDashboardWithSupabase from './StudentDashboard.supabase'
 import AdminDashboard from './AdminDashboard'
+import AuthGuard from './components/AuthGuard'
+import OAuthButton from './components/OAuthButton'
+import ForgotPasswordModal from './components/ForgotPasswordModal'
 import './styles.css'
 
 /**
@@ -11,7 +14,7 @@ import './styles.css'
  * Replace your current App.jsx with this file to enable database-backed authentication.
  */
 
-function LoginForm({ onSubmit, loading }) {
+function LoginForm({ onSubmit, loading, onGoogle, onForgot }) {
     const [email, setEmail] = useState('')
     const [password, setPassword] = useState('')
 
@@ -45,6 +48,11 @@ function LoginForm({ onSubmit, loading }) {
             <button type="submit" className="primary" disabled={loading}>
                 {loading ? 'Signing in...' : 'Sign In'}
             </button>
+            <div style={{ marginTop: 8 }}>
+                <button type="button" className="link" onClick={() => onForgot && onForgot()}>
+                    Forgot password?
+                </button>
+            </div>
         </form>
     )
 }
@@ -133,7 +141,9 @@ function SignupForm({ onSubmit, loading }) {
 
 function AppWithSupabase() {
     const [tab, setTab] = useState('signin')
-    const { user, loading, signIn, signUp, signOut } = useAuth()
+    const { user, loading, signIn, signUp, signOut, signInWithProvider, sendPasswordReset } = useAuth()
+    const [forgotOpen, setForgotOpen] = useState(false)
+    const [forgotLoading, setForgotLoading] = useState(false)
     const [authLoading, setAuthLoading] = useState(false)
     const [error, setError] = useState(null)
     const [userRole, setUserRole] = useState(null)
@@ -164,6 +174,35 @@ function AppWithSupabase() {
         }
 
         setAuthLoading(false)
+    }
+
+    const handleGoogleSignIn = async () => {
+        setAuthLoading(true)
+        setError(null)
+        try {
+            const { data, error } = await signInWithProvider('google')
+            if (error) {
+                setError(error.message)
+                setAuthLoading(false)
+            }
+            // For OAuth, Supabase usually redirects the browser.
+        } catch (e) {
+            setError(e.message || String(e))
+            setAuthLoading(false)
+        }
+    }
+
+    const handleForgotPassword = async (email) => {
+        if (!email) return
+        setForgotLoading(true)
+        const { data, error } = await sendPasswordReset(email, { redirectTo: window.location.origin })
+        if (error) {
+            alert('Error sending reset: ' + error.message)
+        } else {
+            alert('If that email exists, a password reset link has been sent.')
+            setForgotOpen(false)
+        }
+        setForgotLoading(false)
     }
 
     const handleSignUp = async (formData) => {
@@ -210,9 +249,17 @@ function AppWithSupabase() {
     // If user is authenticated, show dashboard based on role
     if (user && userRole) {
         if (userRole === 'admin') {
-            return <AdminDashboard onLogout={handleLogout} />
+            return (
+                <AuthGuard>
+                    <AdminDashboard onLogout={handleLogout} />
+                </AuthGuard>
+            )
         } else if (userRole === 'student') {
-            return <StudentDashboardWithSupabase onLogout={handleLogout} />
+            return (
+                <AuthGuard>
+                    <StudentDashboardWithSupabase onLogout={handleLogout} />
+                </AuthGuard>
+            )
         } else if (userRole === 'faculty') {
             // TODO: Create FacultyDashboard component
             return (
@@ -273,10 +320,20 @@ function AppWithSupabase() {
                 )}
 
                 {tab === 'signin' ? (
-                    <LoginForm onSubmit={handleSignIn} loading={authLoading} />
+                    <>
+                        <LoginForm onSubmit={handleSignIn} loading={authLoading} onGoogle={handleGoogleSignIn} onForgot={() => setForgotOpen(true)} />
+                        <div style={{ marginTop: 12, textAlign: 'center' }}>
+                            <div className="divider"><span>or</span></div>
+                            <div style={{ marginTop: 10 }}>
+                                <OAuthButton onClick={handleGoogleSignIn}>Continue with Google</OAuthButton>
+                            </div>
+                        </div>
+                    </>
                 ) : (
                     <SignupForm onSubmit={handleSignUp} loading={authLoading} />
                 )}
+
+                <ForgotPasswordModal open={forgotOpen} onClose={() => setForgotOpen(false)} onSubmit={handleForgotPassword} loading={forgotLoading} />
 
                 <p className="muted" style={{ marginTop: '16px' }}>
                     {tab === 'signin'
