@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { supabase, auth } from './supabase'
+import { supabase, auth } from '../supabase'
 
 /**
  * Hook to manage authentication state
