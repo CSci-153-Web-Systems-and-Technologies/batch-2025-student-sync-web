@@ -176,6 +176,7 @@ CREATE TABLE public.announcements (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     title TEXT NOT NULL,
     content TEXT NOT NULL,
+    meta JSONB DEFAULT '{}'::JSONB,
     priority announcement_priority DEFAULT 'medium',
     target_audience announcement_target DEFAULT 'all',
     program_id UUID REFERENCES degree_programs(id), -- if program_specific
