@@ -470,23 +470,9 @@ function Communications() {
                 <p className={styles.muted}>Manage important dates and academic events</p>
 
                 <div className={styles.calendarActions}>
-                    <button className={styles.secondaryBtn} onClick={async () => {
-                        const title = window.prompt('Event title')
-                        if (!title) return
-                        const start_date = window.prompt('Start date (YYYY-MM-DD)') || ''
-                        const end_date = window.prompt('End date (YYYY-MM-DD)') || start_date
-                        const description = window.prompt('Description') || ''
-                        try {
-                            const { data, error } = await apiCalendar.createEvent({ title, start_date, end_date, description })
-                            if (error) throw error
-                            alert('Event created')
-                            window.location.reload()
-                        } catch (e) {
-                            alert('Error creating event: ' + (e.message || e))
-                        }
-                    }}>➕ Add Academic Event</button>
-                    <button className={styles.secondaryBtn}>📅 Exam Schedule</button>
-                    <button className={styles.secondaryBtn}>📆 Academic Deadlines</button>
+                    <button className={styles.secondaryBtn} onClick={() => window.__openAddForm('event', {})}>➕ Add Academic Event</button>
+                    <button className={styles.secondaryBtn} onClick={() => window.__openAddForm('event', { event_type: 'exam' })}>📅 Exam Schedule</button>
+                    <button className={styles.secondaryBtn} onClick={() => window.__openAddForm('event', { event_type: 'deadline' })}>📆 Academic Deadlines</button>
                 </div>
 
                 <div className={styles.upcomingEvents}>
@@ -869,6 +855,9 @@ export default function AdminDashboard({ onLogout }) {
             } else if (addForm.type === 'faculty') {
                 const { data, error } = await apiFaculty.createFaculty(payload)
                 if (error) throw error
+            } else if (addForm.type === 'event') {
+                const { data, error } = await apiCalendar.createEvent(payload)
+                if (error) throw error
             }
             alert(`${addForm.type.charAt(0).toUpperCase() + addForm.type.slice(1)} created`)
             closeAddForm()
@@ -935,6 +924,11 @@ function AddForm({ type, defaultData = {}, onCancel, onSubmit, loading, programs
         const payload = { ...form }
         // normalize credits/year fields to numbers when present
         if (payload.credits) payload.credits = parseInt(payload.credits, 10) || 0
+        if (type === 'event') {
+            // ensure dates
+            if (payload.start_date && !payload.end_date) payload.end_date = payload.start_date
+            payload.is_all_day = !!payload.is_all_day
+        }
         onSubmit(payload)
     }
 
@@ -1030,6 +1024,29 @@ function AddForm({ type, defaultData = {}, onCancel, onSubmit, loading, programs
                         {form.department === '' && <input className={styles.input} placeholder="Custom department" value={form.department || ''} onChange={onChange('department')} />}
                     </label>
                     <label className={styles.formRow}>Phone<input className={styles.input} value={form.phone || ''} onChange={onChange('phone')} /></label>
+                </>
+            )}
+
+            {type === 'event' && (
+                <>
+                    <label className={styles.formRow}>Title<input className={styles.input} value={form.title || ''} onChange={onChange('title')} required /></label>
+                    <label className={styles.formRow}>Description<textarea className={styles.input} rows={4} value={form.description || ''} onChange={onChange('description')} /></label>
+                    <label className={styles.formRow}>Type
+                        <select className={styles.input} value={form.event_type || 'other'} onChange={onChange('event_type')}>
+                            <option value="other">Other</option>
+                            <option value="holiday">Holiday</option>
+                            <option value="exam">Exam</option>
+                            <option value="registration">Registration</option>
+                            <option value="deadline">Deadline</option>
+                            <option value="ceremony">Ceremony</option>
+                        </select>
+                    </label>
+                    <label className={styles.formRow}>Start date<input type="date" className={styles.input} value={form.start_date || ''} onChange={onChange('start_date')} required /></label>
+                    <label className={styles.formRow}>End date<input type="date" className={styles.input} value={form.end_date || ''} onChange={onChange('end_date')} /></label>
+                    <label className={styles.formRow}>All day
+                        <input type="checkbox" checked={!!form.is_all_day} onChange={e => setForm(f => ({ ...f, is_all_day: e.target.checked }))} />
+                    </label>
+                    <label className={styles.formRow}>Location<input className={styles.input} value={form.location || ''} onChange={onChange('location')} /></label>
                 </>
             )}
 
