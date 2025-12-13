@@ -242,7 +242,7 @@ export function useEnrollments(studentId) {
         }
 
         fetchEnrollments()
-        
+
         // Subscribe to enrollment changes for this student
         const channel = supabase
             .channel('enrollments-changes')

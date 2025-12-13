@@ -27,6 +27,27 @@ export async function uploadFile(bucket, path, file) {
 }
 
 /**
+ * Download file from Supabase Storage and trigger browser download
+ */
+export async function downloadFile(bucket, path, filename) {
+    const { data, error } = await supabase.storage
+        .from(bucket)
+        .download(path)
+
+    if (error) throw error
+
+    const blob = await data.blob()
+    const url = window.URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = filename || path.split('/').pop()
+    document.body.appendChild(link)
+    link.click()
+    link.remove()
+    window.URL.revokeObjectURL(url)
+}
+
+/**
  * Delete file from Supabase Storage
  */
 export async function deleteFile(bucket, path) {
