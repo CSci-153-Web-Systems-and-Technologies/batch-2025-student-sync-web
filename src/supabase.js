@@ -168,11 +168,87 @@ export const students = {
 
     // Create student (admin only)
     createStudent: async (studentData) => {
+        // If an email is provided, ensure there's an auth user and a users profile row
+        let userId = studentData.id || null
+
+        if (studentData.email) {
+            const email = studentData.email
+            const first_name = studentData.first_name || null
+            const last_name = studentData.last_name || null
+
+            // Try signing up the user (will fail if already exists)
+            try {
+                const password = studentData.password || (Math.random().toString(36).slice(-10) + 'A1!')
+                const { data: signData, error: signError } = await supabase.auth.signUp({
+                    email,
+                    password,
+                    options: { data: { first_name, last_name, role: 'student' } }
+                })
+
+                if (signError && !signError.message?.includes('already registered')) {
+                    return { data: null, error: signError }
+                }
+
+                if (signData && signData.user && signData.user.id) {
+                    userId = signData.user.id
+                }
+            } catch (e) {
+                return { data: null, error: e }
+            }
+
+            // If signup didn't return an id (user may already exist), try to find profile in users table
+            if (!userId) {
+                const { data: existingUser, error: existingErr } = await supabase
+                    .from('users')
+                    .select('id')
+                    .eq('email', email)
+                    .maybeSingle()
+
+                if (existingErr) return { data: null, error: existingErr }
+                if (existingUser && existingUser.id) userId = existingUser.id
+            }
+
+            // Insert profile into public.users (extend auth.users) if not already present
+            if (userId) {
+                const profile = {
+                    id: userId,
+                    email,
+                    first_name: first_name || '',
+                    last_name: last_name || '',
+                    role: 'student',
+                    status: 'active'
+                }
+                // use upsert to avoid constraint failures if profile exists
+                const { error: upsertErr } = await supabase
+                    .from('users')
+                    .upsert(profile, { onConflict: ['id'] })
+
+                if (upsertErr) return { data: null, error: upsertErr }
+            }
+        }
+
+        // Build student record
+        const studentRecord = {
+            id: userId || undefined,
+            student_id: studentData.student_id || studentData.student_number || (`S-${Date.now()}`),
+            program_id: studentData.program_id || studentData.program || null,
+            year_level: studentData.year_level || 1,
+            semester: studentData.semester || 1,
+            enrollment_date: studentData.enrollment_date || null,
+            expected_graduation_date: studentData.expected_graduation_date || null,
+            gpa: studentData.gpa || 0.0,
+            total_credits_earned: studentData.total_credits_earned || 0,
+            qr_code_data: studentData.qr_code_data || null,
+            emergency_contact_name: studentData.emergency_contact_name || null,
+            emergency_contact_phone: studentData.emergency_contact_phone || null
+        }
+
         const { data, error } = await supabase
             .from('students')
-            .insert(studentData)
+            .insert(studentRecord)
             .select()
             .single()
+
         return { data, error }
     },
 
@@ -271,9 +347,26 @@ export const degreePrograms = {
 
     // Create program (admin only)
     createProgram: async (programData) => {
+        // sanitize input: map 'degree' -> 'code', coerce numbers, and avoid inserting invalid UUID for id
+        const insertData = { ...programData }
+
+        if (insertData.degree && !insertData.code) {
+            insertData.code = insertData.degree
+            delete insertData.degree
+        }
+
+        if (insertData.duration_years) insertData.duration_years = parseInt(insertData.duration_years, 10) || 0
+        if (insertData.total_credits) insertData.total_credits = parseInt(insertData.total_credits, 10) || 0
+
+        // If an 'id' was accidentally provided but is not a valid UUID, remove it to allow default generation
+        const isUuid = (v) => typeof v === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(v)
+        if (insertData.id && !isUuid(insertData.id)) {
+            delete insertData.id
+        }
+
         const { data, error } = await supabase
             .from('degree_programs')
-            .insert(programData)
+            .insert(insertData)
             .select()
             .single()
         return { data, error }
