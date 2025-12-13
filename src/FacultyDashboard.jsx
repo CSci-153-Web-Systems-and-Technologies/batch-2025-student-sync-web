@@ -247,6 +247,16 @@ export default function FacultyDashboard({ onLogout, initialFaculty }) {
         }
     }
 
+    const buildMailto = (recipients, subject = '', body = '') => {
+        if (!recipients) return '#'
+        const list = Array.isArray(recipients) ? recipients.filter(Boolean) : [recipients]
+        const to = list.join(',')
+        const params = []
+        if (subject) params.push(`subject=${encodeURIComponent(subject)}`)
+        if (body) params.push(`body=${encodeURIComponent(body)}`)
+        return `mailto:${to}${params.length ? `?${params.join('&')}` : ''}`
+    }
+
     return (
         <div className={styles.container}>
             <Topbar name={`${faculty.first_name} ${faculty.last_name}`} onLogout={onLogout} />
@@ -280,12 +290,23 @@ export default function FacultyDashboard({ onLogout, initialFaculty }) {
                                     <div style={{ marginTop: 8, color: actionMsg.type === 'error' ? 'crimson' : (actionMsg.type === 'success' ? 'green' : '#444') }}>{actionMsg.text}</div>
                                 )}
                             </div>
+                            <div style={{ marginBottom: 12 }}>
+                                <label style={{ display: 'block', fontSize: 13, marginBottom: 6 }}>Email all enrolled students</label>
+                                <div style={{ display: 'flex', gap: 8 }}>
+                                    <a className={styles.actionBtn} href={buildMailto(roster.map(r => r.email), 'Class Announcement', 'Hello class,')}>Email All</a>
+                                </div>
+                            </div>
 
                             {(roster || []).map(r => (
-                                <div key={r.id} style={{ padding: 8, borderBottom: '1px solid #f2f2f2' }}>
-                                    <div style={{ fontWeight: 600 }}>{r.name}</div>
-                                    <div style={{ fontSize: 13, color: '#666' }}>{r.email} {r.studentId ? `• ${r.studentId}` : ''}</div>
-                                    <div style={{ fontSize: 12, color: '#777' }}>Status: {r.status}</div>
+                                <div key={r.id} style={{ padding: 8, borderBottom: '1px solid #f2f2f2', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                    <div>
+                                        <div style={{ fontWeight: 600 }}>{r.name}</div>
+                                        <div style={{ fontSize: 13, color: '#666' }}>{r.email} {r.studentId ? `• ${r.studentId}` : ''}</div>
+                                        <div style={{ fontSize: 12, color: '#777' }}>Status: {r.status}</div>
+                                    </div>
+                                    <div style={{ display: 'flex', gap: 8 }}>
+                                        <a className={styles.viewBtn} href={buildMailto(r.email, 'Message from your instructor', 'Hello,')}>Email</a>
+                                    </div>
                                 </div>
                             ))}
                         </div>
