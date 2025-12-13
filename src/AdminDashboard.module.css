@@ -1408,7 +1408,7 @@
 .addOverlay {
     position: fixed;
     inset: 0;
-    background: rgba(2,6,23,0.6);
+    background: rgba(2, 6, 23, 0.6);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -1465,6 +1465,11 @@
 }
 
 @media (max-width: 700px) {
-    .addForm { grid-template-columns: 1fr; }
-    .addForm .formRow:nth-child(-n+2) { grid-column: auto; }
+    .addForm {
+        grid-template-columns: 1fr;
+    }
+
+    .addForm .formRow:nth-child(-n+2) {
+        grid-column: auto;
+    }
 }
