@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { useAuth, useAnnouncements, useCalendarEvents } from './hooks/useSupabase'
-import { supabase, announcements as apiAnnouncements } from './supabase'
+import { supabase, announcements as apiAnnouncements, faculty as facultyApi, users as usersApi } from './supabase'
 import styles from './StudentDashboard.module.css'
 
 function Topbar({ user, onLogout }) {
@@ -137,18 +137,43 @@ export default function FacultyDashboardWithSupabase({ onLogout }) {
         if (!authUser) return
         const fetch = async () => {
             setLoading(true)
-            // fetch faculty record by user id
-            const { data: fdata } = await supabase.from('faculty').select(`*, user:users(*)`).eq('user_id', authUser.id).single()
+
+            // Try to load faculty record using helper; some setups use faculty.id === auth user id
+            let fdata = null
+            try {
+                const { data, error } = await facultyApi.getFaculty(authUser.id)
+                if (data) fdata = data
+                // if error and no data, we'll fall back to user's profile below
+            } catch (e) {
+                // ignore and fall back
+            }
+
+            // If no faculty record exists, try to load the users profile and use it as a minimal faculty object
+            if (!fdata) {
+                try {
+                    const { data: profile } = await usersApi.getProfile(authUser.id)
+                    if (profile) {
+                        fdata = { user: profile }
+                    }
+                } catch (e) {
+                    // ignore
+                }
+            }
+
             setFaculty(fdata)
 
-            // fetch all course sections and filter by faculty user id
-            const { data: secs } = await supabase
-                .from('course_sections')
-                .select(`*, course:courses(*), term:academic_terms(*), faculty:faculty(*, user:users(*))`)
-                .order('course.code', { ascending: true })
+            // fetch all course sections and filter by faculty user id (best-effort)
+            try {
+                const { data: secs } = await supabase
+                    .from('course_sections')
+                    .select(`*, course:courses(*), term:academic_terms(*), faculty:faculty(*, user:users(*))`)
+                    .order('course.code', { ascending: true })
 
-            const mySections = (secs || []).filter(s => s.faculty && s.faculty.user && s.faculty.user.id === authUser.id)
-            setSections(mySections)
+                const mySections = (secs || []).filter(s => s.faculty && ((s.faculty.id === authUser.id) || (s.faculty.user && s.faculty.user.id === authUser.id)))
+                setSections(mySections)
+            } catch (e) {
+                setSections([])
+            }
 
             setLoading(false)
         }
