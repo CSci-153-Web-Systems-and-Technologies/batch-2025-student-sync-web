@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
 import styles from './StudentDashboard.module.css'
-import { useAuth, useUserProfile, useStudent } from './hooks/useSupabase'
+import { useAuth, useUserProfile, useStudent, useEnrollments } from './hooks/useSupabase'
 
 function Topbar({ name, onLogout }) {
     return (
@@ -31,12 +31,34 @@ function Tabs({ value, onChange }) {
     )
 }
 
-function Overview({ student, profile, loading }) {
+function Overview({ student, profile, loading, enrollments = [] }) {
     const fullName = profile ? `${profile.first_name || ''} ${profile.last_name || ''}`.trim() : ''
     const course = student?.program?.name || profile?.course || '—'
     const idNo = student?.student_number || student?.id || profile?.id || '—'
     const gpa = student?.gpa ?? '—'
     const year = student?.year_level || profile?.year_level || '—'
+
+    // Compute units completed (prefer stored total, else sum completed enrollments)
+    const unitsFromEnrollments = (enrollments || []).reduce((sum, e) => {
+        const status = e?.status
+        const credits = Number(e?.section?.course?.credits ?? 0)
+        if ((status === 'completed' || e?.grade != null) && credits) return sum + credits
+        return sum
+    }, 0)
+    const unitsCompleted = student?.total_credits_earned ?? unitsFromEnrollments
+
+    // Current courses: those with status 'enrolled' and whose term is current (or within term dates)
+    const today = new Date()
+    const currentCourses = (enrollments || []).filter(e => {
+        if (e?.status !== 'enrolled') return false
+        const term = e?.section?.term
+        if (!term) return true
+        if (term.is_current) return true
+        const start = term.start_date ? new Date(term.start_date) : null
+        const end = term.end_date ? new Date(term.end_date) : null
+        if (start && end) return today >= start && today <= end
+        return true
+    }).map(e => ({ id: e.id, code: e?.section?.course?.code, name: e?.section?.course?.name, credits: e?.section?.course?.credits }))
 
     return (
         <div className={styles.overviewGrid}>
@@ -63,8 +85,19 @@ function Overview({ student, profile, loading }) {
                     <div className={styles.cardValue}>{year}</div>
                 </div>
                 <div className={styles.smallCard}>
-                    <div className={styles.cardLabel}>Course</div>
-                    <div className={styles.cardValue}>{course}</div>
+                    <div className={styles.cardLabel}>Units Completed</div>
+                    <div className={styles.cardValue}>{loading ? 'Loading...' : unitsCompleted}</div>
+                </div>
+                <div className={styles.smallCard}>
+                    <div className={styles.cardLabel}>Current Courses</div>
+                    <div className={styles.cardValue}>{loading ? 'Loading...' : `${currentCourses.length} course(s)`}</div>
+                    {currentCourses.length > 0 && (
+                        <ul className={styles.currentCoursesList}>
+                            {currentCourses.map(c => (
+                                <li key={c.id}>{c.code ? `${c.code} — ` : ''}{c.name}</li>
+                            ))}
+                        </ul>
+                    )}
                 </div>
             </aside>
         </div>
@@ -143,6 +176,7 @@ export default function StudentDashboard({ onLogout }) {
     // Try to use student record if profile contains student_id, otherwise fallback
     const studentId = profile?.student_id || profile?.id
     const { student, loading: studentLoading } = useStudent(studentId)
+    const { enrollments, loading: enrollLoading } = useEnrollments(studentId)
 
     const displayName = profile?.first_name ? `${profile.first_name} ${profile.last_name}` : user?.email?.split('@')[0]
 
@@ -155,9 +189,9 @@ export default function StudentDashboard({ onLogout }) {
                 <Tabs value={tab} onChange={setTab} />
 
                 <section className={styles.section}>
-                    {tab === 'Overview' && <Overview student={student} loading={studentLoading} profile={profile} />}
+                    {tab === 'Overview' && <Overview student={student} loading={studentLoading || enrollLoading} profile={profile} enrollments={enrollments} />}
                     {tab === 'Profile Management' && <ProfileManagement student={student} loading={studentLoading} profile={profile} />}
-                    {tab === 'Academic Info' && <AcademicInfo student={student} loading={studentLoading} profile={profile} />}
+                    {tab === 'Academic Info' && <AcademicInfo student={student} loading={studentLoading || enrollLoading} profile={profile} enrollments={enrollments} />}
                 </section>
             </main>
         </div>
