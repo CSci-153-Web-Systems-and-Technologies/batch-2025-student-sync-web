@@ -94,41 +94,7 @@ function StatCards({ totals }) {
 }
 
 function DegreePrograms({ programs = [] }) {
-    // replaced prompt-based add with top-level form via onOpenAdd
-    const [importOpen, setImportOpen] = React.useState(false)
-    const [importJson, setImportJson] = React.useState('')
-    const [importing, setImporting] = React.useState(false)
-    const [importResult, setImportResult] = React.useState(null)
-
-    const handleImportPrograms = async () => {
-        if (!importJson) return alert('Paste the JSON array of programs in the textarea')
-        let arr
-        try {
-            arr = JSON.parse(importJson)
-            if (!Array.isArray(arr)) throw new Error('Expected a JSON array')
-        } catch (e) {
-            return alert('Invalid JSON: ' + (e.message || e))
-        }
-
-        setImporting(true)
-        const results = { success: 0, failed: 0, errors: [] }
-        for (const p of arr) {
-            try {
-                const { data, error } = await apiDegreePrograms.createProgram(p)
-                if (error) throw error
-                results.success += 1
-            } catch (e) {
-                results.failed += 1
-                results.errors.push({ program: p, error: e.message || String(e) })
-            }
-        }
-        setImporting(false)
-        setImportResult(results)
-        if (results.failed === 0) {
-            alert(`Imported ${results.success} programs`)
-            window.location.reload()
-        }
-    }
+    // replaced prompt-based add with top-level form via onOpen
     return (
         <div className={styles.contentSection}>
             <div className={styles.sectionHeader}>
@@ -137,40 +103,9 @@ function DegreePrograms({ programs = [] }) {
                     <p className={styles.muted}>Click on any program to view all students enrolled in that degree program</p>
                 </div>
                 <div className={styles.headerActions}>
-                    <button className={styles.secondaryBtn} onClick={() => setImportOpen(o => !o)}>{importOpen ? 'Close Import' : 'Import Programs'}</button>
                     <button className={styles.primaryBtn} onClick={() => (typeof window.__openAddForm === 'function' ? window.__openAddForm('program') : null)}>Add Programs</button>
                 </div>
             </div>
-            {importOpen && (
-                <div className={styles.importCard} style={{ margin: '16px 0', padding: 12, borderRadius: 8, background: '#fff', border: '1px solid #eee' }}>
-                    <h4 style={{ marginTop: 0 }}>Import Programs (JSON array)</h4>
-                    <textarea
-                        className={styles.input}
-                        placeholder='Paste JSON array, e.g. [{"name":"Computer Science","code":"CS"}, ...]'
-                        value={importJson}
-                        onChange={e => setImportJson(e.target.value)}
-                        rows={6}
-                        style={{ width: '100%', fontFamily: 'monospace' }}
-                    />
-                    <div style={{ marginTop: 8, display: 'flex', gap: 8 }}>
-                        <button className={styles.primaryBtn} onClick={handleImportPrograms} disabled={importing}>{importing ? 'Importing…' : 'Import'}</button>
-                        <button className={styles.secondaryBtn} onClick={() => { setImportOpen(false); setImportJson(''); setImportResult(null) }}>Cancel</button>
-                        <button className={styles.secondaryBtn} onClick={() => setImportJson('[{"name":"Example Program","code":"EX"}]')}>Insert Example</button>
-                    </div>
-                    {importResult && (
-                        <div style={{ marginTop: 8 }}>
-                            <div>Success: {importResult.success}</div>
-                            <div>Failed: {importResult.failed}</div>
-                            {importResult.errors && importResult.errors.length > 0 && (
-                                <details style={{ marginTop: 6 }}>
-                                    <summary>Errors</summary>
-                                    <pre style={{ whiteSpace: 'pre-wrap', fontSize: 12 }}>{JSON.stringify(importResult.errors, null, 2)}</pre>
-                                </details>
-                            )}
-                        </div>
-                    )}
-                </div>
-            )}
             <div className={styles.programGrid}>
                 {(programs || []).map((prog, i) => (
                     <div key={prog.id || i} className={styles.programCard}>
@@ -193,40 +128,6 @@ function DegreePrograms({ programs = [] }) {
 function CourseManagement({ courses = [] }) {
     // replaced prompt-based add with top-level form via onOpenAdd
 
-    const [courseImportOpen, setCourseImportOpen] = React.useState(false)
-    const [courseImportJson, setCourseImportJson] = React.useState('')
-    const [courseImporting, setCourseImporting] = React.useState(false)
-    const [courseImportResult, setCourseImportResult] = React.useState(null)
-
-    const handleImportCourses = async () => {
-        if (!courseImportJson) return alert('Paste the JSON array of courses in the textarea')
-        let arr
-        try {
-            arr = JSON.parse(courseImportJson)
-            if (!Array.isArray(arr)) throw new Error('Expected a JSON array')
-        } catch (e) {
-            return alert('Invalid JSON: ' + (e.message || e))
-        }
-
-        setCourseImporting(true)
-        const results = { success: 0, failed: 0, errors: [] }
-        for (const c of arr) {
-            try {
-                const { data, error } = await apiCourses.createCourse(c)
-                if (error) throw error
-                results.success += 1
-            } catch (e) {
-                results.failed += 1
-                results.errors.push({ course: c, error: e.message || String(e) })
-            }
-        }
-        setCourseImporting(false)
-        setCourseImportResult(results)
-        if (results.failed === 0) {
-            alert(`Imported ${results.success} courses`)
-            window.location.reload()
-        }
-    }
 
     return (
         <div className={styles.contentSection}>
@@ -267,40 +168,9 @@ function CourseManagement({ courses = [] }) {
                     <p className={styles.muted}>Click on any course to view detailed information and manage enrollments</p>
                 </div>
                 <div className={styles.headerActions}>
-                    <button className={styles.secondaryBtn} onClick={() => setCourseImportOpen(o => !o)}>{courseImportOpen ? 'Close Import' : 'Import Courses'}</button>
                     <button className={styles.primaryBtn} onClick={() => (typeof window.__openAddForm === 'function' ? window.__openAddForm('course') : null)}>Add Courses</button>
                 </div>
             </div>
-            {courseImportOpen && (
-                <div className={styles.importCard} style={{ margin: '16px 0', padding: 12, borderRadius: 8, background: '#fff', border: '1px solid #eee' }}>
-                    <h4 style={{ marginTop: 0 }}>Import Courses (JSON array)</h4>
-                    <textarea
-                        className={styles.input}
-                        placeholder='Paste JSON array, e.g. [{"name":"Calculus II","code":"MATH102","credits":3}, ...]'
-                        value={courseImportJson}
-                        onChange={e => setCourseImportJson(e.target.value)}
-                        rows={6}
-                        style={{ width: '100%', fontFamily: 'monospace' }}
-                    />
-                    <div style={{ marginTop: 8, display: 'flex', gap: 8 }}>
-                        <button className={styles.primaryBtn} onClick={handleImportCourses} disabled={courseImporting}>{courseImporting ? 'Importing…' : 'Import'}</button>
-                        <button className={styles.secondaryBtn} onClick={() => { setCourseImportOpen(false); setCourseImportJson(''); setCourseImportResult(null) }}>Cancel</button>
-                        <button className={styles.secondaryBtn} onClick={() => setCourseImportJson('[{"name":"Example Course","code":"EX101","credits":3}]')}>Insert Example</button>
-                    </div>
-                    {courseImportResult && (
-                        <div style={{ marginTop: 8 }}>
-                            <div>Success: {courseImportResult.success}</div>
-                            <div>Failed: {courseImportResult.failed}</div>
-                            {courseImportResult.errors && courseImportResult.errors.length > 0 && (
-                                <details style={{ marginTop: 6 }}>
-                                    <summary>Errors</summary>
-                                    <pre style={{ whiteSpace: 'pre-wrap', fontSize: 12 }}>{JSON.stringify(courseImportResult.errors, null, 2)}</pre>
-                                </details>
-                            )}
-                        </div>
-                    )}
-                </div>
-            )}
             <div className={styles.searchBox}>
                 <input placeholder="🔍 Search courses..." />
             </div>
@@ -329,20 +199,7 @@ function CourseManagement({ courses = [] }) {
 function StudentManagement({ students = [] }) {
     // replaced prompt-based add with top-level form via onOpenAdd
 
-    const handleImportStudents = async () => {
-        const json = window.prompt('Paste JSON array of students')
-        if (!json) return
-        try {
-            const arr = JSON.parse(json)
-            for (const s of arr) {
-                await apiStudents.createStudent(s)
-            }
-            alert('Imported students')
-            window.location.reload()
-        } catch (e) {
-            alert('Import failed: ' + (e.message || e))
-        }
-    }
+    
 
     return (
         <div className={styles.contentSection}>
@@ -352,9 +209,8 @@ function StudentManagement({ students = [] }) {
                     <p className={styles.muted}>Search and manage student records</p>
                 </div>
                 <div className={styles.headerActions}>
-                    <button className={styles.secondaryBtn} onClick={handleImportStudents}>Import Students</button>
-                    <button className={styles.primaryBtn} onClick={() => (typeof window.__openAddForm === 'function' ? window.__openAddForm('student') : null)}>Add Student</button>
-                </div>
+                        <button className={styles.primaryBtn} onClick={() => (typeof window.__openAddForm === 'function' ? window.__openAddForm('student') : null)}>Add Student</button>
+                    </div>
             </div>
             <div className={styles.searchBox}>
                 <input placeholder="🔍 Search students..." />
@@ -401,21 +257,6 @@ function StudentManagement({ students = [] }) {
 function FacultyManagement({ faculty = [] }) {
     // replaced prompt-based add with top-level form via onOpenAdd
 
-    const handleImportFaculty = async () => {
-        const json = window.prompt('Paste JSON array of faculty members')
-        if (!json) return
-        try {
-            const arr = JSON.parse(json)
-            for (const f of arr) {
-                await apiFaculty.createFaculty(f)
-            }
-            alert('Imported faculty')
-            window.location.reload()
-        } catch (e) {
-            alert('Import failed: ' + (e.message || e))
-        }
-    }
-
     return (
         <div className={styles.contentSection}>
             <div className={styles.sectionHeader}>
@@ -424,7 +265,6 @@ function FacultyManagement({ faculty = [] }) {
                     <p className={styles.muted}>Manage faculty members and their course assignments</p>
                 </div>
                 <div className={styles.headerActions}>
-                    <button className={styles.secondaryBtn} onClick={handleImportFaculty}>Import Faculty</button>
                     <button className={styles.primaryBtn} onClick={() => (typeof window.__openAddForm === 'function' ? window.__openAddForm('faculty') : null)}>Add Faculty</button>
                 </div>
             </div>
