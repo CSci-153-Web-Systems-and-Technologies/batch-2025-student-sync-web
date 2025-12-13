@@ -28,9 +28,9 @@ function Topbar({ name, onLogout, onSearch, theme, onToggleTheme }) {
                 />
             </div>
 
-            <div className={styles.userActions}>
+                <div className={styles.userActions}>
                 <button className={styles.iconBtn} title="Notifications" aria-label="Notifications">🔔</button>
-                <button className={styles.iconBtn} title="Quick Add" aria-label="Quick add">➕</button>
+                <button className={styles.iconBtn} title="Quick Add" aria-label="Quick add" onClick={() => (typeof window.__openAddForm === 'function' ? window.__openAddForm('program') : null)}>➕</button>
                 <button className={styles.themeBtn} onClick={onToggleTheme} aria-pressed={theme === 'dark'} title="Toggle theme">{theme === 'dark' ? '🌙' : '☀️'}</button>
                 <div className={styles.user}>
                     <span className={styles.welcomeName}>Hi, {name || 'Admin'}</span>
@@ -393,20 +393,42 @@ function FacultyManagement({ faculty = [] }) {
 }
 
 function Communications() {
-    const handleCreateAnnouncement = async () => {
-        const title = window.prompt('Announcement title')
-        if (!title) return
-        const content = window.prompt('Message body') || ''
-        const audience = window.prompt('Target audience (all, faculty, course:<code>, program:<id>)') || 'all'
+    const [title, setTitle] = React.useState('')
+    const [content, setContent] = React.useState('')
+    const [audience, setAudience] = React.useState('all')
+    const [messageType, setMessageType] = React.useState('email')
+    const [sending, setSending] = React.useState(false)
+
+    const handleCreateAnnouncement = async (e) => {
+        e && e.preventDefault()
+        if (!title || !content) {
+            alert('Please provide a title and message body.')
+            return
+        }
+
+        setSending(true)
         try {
-            const { data, error } = await apiAnnouncements.createAnnouncement({ title, content, target_audience: audience, published_at: new Date().toISOString(), is_active: true })
+            const { data, error } = await apiAnnouncements.createAnnouncement({
+                title,
+                content,
+                target_audience: audience,
+                published_at: new Date().toISOString(),
+                is_active: true,
+                meta: { messageType }
+            })
             if (error) throw error
             alert('Announcement created')
-            window.location.reload()
-        } catch (e) {
-            alert('Error creating announcement: ' + (e.message || e))
+            setTitle('')
+            setContent('')
+            setAudience('all')
+            setMessageType('email')
+        } catch (err) {
+            alert('Error creating announcement: ' + (err.message || err))
+        } finally {
+            setSending(false)
         }
     }
+
     return (
         <div className={styles.contentSection}>
             <div className={styles.communicationsGrid}>
@@ -414,47 +436,41 @@ function Communications() {
                     <h3>📢 Send Announcements</h3>
                     <p className={styles.muted}>Create and send announcements to students and faculty</p>
 
-                    <div className={styles.announcementForm}>
+                    <form className={styles.announcementForm} onSubmit={handleCreateAnnouncement}>
+                        <div className={styles.formSection}>
+                            <h4>Message</h4>
+                            <label className={styles.formRow}>
+                                <input className={styles.input} placeholder="Title" value={title} onChange={e => setTitle(e.target.value)} required />
+                            </label>
+                            <label className={styles.formRow}>
+                                <textarea className={styles.input} placeholder="Message body" value={content} onChange={e => setContent(e.target.value)} rows={6} required />
+                            </label>
+                        </div>
+
                         <div className={styles.formSection}>
                             <h4>Recipient Group</h4>
                             <div className={styles.recipientOptions}>
-                                <label className={styles.radioOption}>
-                                    <input type="radio" name="recipient" defaultChecked />
-                                    <span>👥 All Students</span>
-                                </label>
-                                <label className={styles.radioOption}>
-                                    <input type="radio" name="recipient" />
-                                    <span>👨‍🏫 All Faculty</span>
-                                </label>
+                                <label className={styles.radioOption}><input type="radio" name="recipient" checked={audience === 'all'} onChange={() => setAudience('all')} /><span>👥 All Students</span></label>
+                                <label className={styles.radioOption}><input type="radio" name="recipient" checked={audience === 'faculty'} onChange={() => setAudience('faculty')} /><span>👨‍🏫 All Faculty</span></label>
                             </div>
-                            <div className={styles.recipientOptions}>
-                                <label className={styles.radioOption}>
-                                    <input type="radio" name="recipient" />
-                                    <span>📚 By Course</span>
-                                </label>
-                                <label className={styles.radioOption}>
-                                    <input type="radio" name="recipient" />
-                                    <span>🎓 By Major</span>
-                                </label>
+                            <div className={styles.recipientOptions} style={{ marginTop: 8 }}>
+                                <label className={styles.radioOption}><input type="radio" name="recipient2" checked={audience === 'course'} onChange={() => setAudience('course')} /><span>📚 By Course</span></label>
+                                <label className={styles.radioOption}><input type="radio" name="recipient2" checked={audience === 'program'} onChange={() => setAudience('program')} /><span>🎓 By Major</span></label>
                             </div>
                         </div>
 
                         <div className={styles.formSection}>
-                            <h4>Message Type</h4>
+                            <h4>Delivery</h4>
                             <div className={styles.recipientOptions}>
-                                <label className={styles.radioOption}>
-                                    <input type="radio" name="messageType" defaultChecked />
-                                    <span>📧 Email</span>
-                                </label>
-                                <label className={styles.radioOption}>
-                                    <input type="radio" name="messageType" />
-                                    <span>🔔 Push Notification</span>
-                                </label>
+                                <label className={styles.radioOption}><input type="radio" name="messageType" checked={messageType === 'email'} onChange={() => setMessageType('email')} /><span>📧 Email</span></label>
+                                <label className={styles.radioOption}><input type="radio" name="messageType" checked={messageType === 'push'} onChange={() => setMessageType('push')} /><span>🔔 Push Notification</span></label>
                             </div>
                         </div>
 
-                        <button className={styles.createAnnouncementBtn} onClick={handleCreateAnnouncement}>✉️ Create New Announcement</button>
-                    </div>
+                        <div style={{ marginTop: 12 }}>
+                            <button className={styles.createAnnouncementBtn} type="submit" disabled={sending}>{sending ? 'Sending…' : '✉️ Send Announcement'}</button>
+                        </div>
+                    </form>
                 </div>
 
                 <div className={styles.recentComms}>
@@ -676,20 +692,32 @@ function AnalyticsReports() {
                 </div>
             </div>
 
-            <div className={styles.quickActions}>
+                <div className={styles.quickActions}>
                 <h4>⚡ Quick Admin Actions</h4>
-                <p className={styles.muted}>Essential administrative tasks and system management</p>
+                <p className={styles.muted}>Essential administrative tasks and quick add forms</p>
                 <div className={styles.actionGrid}>
-                    <button className={styles.actionCard}>
+                    <button className={styles.actionCard} onClick={() => (typeof window.__openAddForm === 'function' ? window.__openAddForm('program') : null)}>
+                        <span>➕ Add Program</span>
+                    </button>
+                    <button className={styles.actionCard} onClick={() => (typeof window.__openAddForm === 'function' ? window.__openAddForm('course') : null)}>
+                        <span>➕ Add Course</span>
+                    </button>
+                    <button className={styles.actionCard} onClick={() => (typeof window.__openAddForm === 'function' ? window.__openAddForm('student') : null)}>
+                        <span>➕ Add Student</span>
+                    </button>
+                    <button className={styles.actionCard} onClick={() => (typeof window.__openAddForm === 'function' ? window.__openAddForm('faculty') : null)}>
+                        <span>➕ Add Faculty</span>
+                    </button>
+                    <button className={styles.actionCard} onClick={() => alert('Import Data')}>
                         <span>📥 Import Data</span>
                     </button>
-                    <button className={styles.actionCard}>
+                    <button className={styles.actionCard} onClick={() => alert('Export Data')}>
                         <span>📤 Export Data</span>
                     </button>
-                    <button className={styles.actionCard}>
+                    <button className={styles.actionCard} onClick={() => alert('Backup System')}>
                         <span>💾 Backup System</span>
                     </button>
-                    <button className={styles.actionCard}>
+                    <button className={styles.actionCard} onClick={() => alert('Security Check')}>
                         <span>🔒 Security Check</span>
                     </button>
                 </div>
