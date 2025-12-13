@@ -582,9 +582,18 @@ export const announcements = {
 
     // Create announcement (admin only)
     createAnnouncement: async (announcementData) => {
+        const allowedFields = [
+            'title', 'content', 'meta', 'priority', 'target_audience',
+            'program_id', 'published_by', 'published_at', 'expires_at', 'is_active'
+        ]
+        const payload = {}
+        Object.keys(announcementData || {}).forEach(k => {
+            if (allowedFields.includes(k)) payload[k] = announcementData[k]
+        })
+
         const { data, error } = await supabase
             .from('announcements')
-            .insert(announcementData)
+            .insert(payload)
             .select()
             .single()
         return { data, error }

@@ -242,6 +242,34 @@ export function useEnrollments(studentId) {
         }
 
         fetchEnrollments()
+
+        // Subscribe to enrollment changes for this student
+        const channel = supabase
+            .channel('enrollments-changes')
+            .on(
+                'postgres_changes',
+                {
+                    event: '*',
+                    schema: 'public',
+                    table: 'enrollments',
+                    filter: `student_id=eq.${studentId}`
+                },
+                (payload) => {
+                    // Adjust local state based on event
+                    if (payload.eventType === 'INSERT') {
+                        setEnrollments(prev => [payload.new, ...prev])
+                    } else if (payload.eventType === 'UPDATE') {
+                        setEnrollments(prev => prev.map(item => item.id === payload.new.id ? payload.new : item))
+                    } else if (payload.eventType === 'DELETE') {
+                        setEnrollments(prev => prev.filter(item => item.id !== payload.old.id))
+                    }
+                }
+            )
+            .subscribe()
+
+        return () => {
+            supabase.removeChannel(channel)
+        }
     }, [studentId])
 
     return { enrollments, loading, error }
