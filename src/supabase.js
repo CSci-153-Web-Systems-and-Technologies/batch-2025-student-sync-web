@@ -4,7 +4,8 @@ const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
 
 if (!supabaseUrl || !supabaseAnonKey) {
-    throw new Error('Missing Supabase environment variables. Please check your .env file.')
+    console.error('Missing Supabase environment variables. Ensure VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY are set in .env')
+    throw new Error('Missing Supabase environment variables. Please check your .env file and restart the dev server.')
 }
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
@@ -565,6 +566,24 @@ export const academicTerms = {
             .eq('is_current', true)
             .single()
         return { data, error }
+    }
+}
+
+// Quick runtime check to verify connectivity (returns { ok, data?, error? })
+export async function testConnection() {
+    try {
+        // Simple lightweight query to validate credentials and reachability
+        const { data, error } = await supabase
+            .from('users')
+            .select('id')
+            .limit(1)
+
+        if (error) {
+            return { ok: false, error }
+        }
+        return { ok: true, data }
+    } catch (err) {
+        return { ok: false, error: err }
     }
 }
 
