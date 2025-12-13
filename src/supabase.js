@@ -227,21 +227,22 @@ export const students = {
             }
         }
 
-        // Build student record
+        // Build student record, only include optional fields when provided so DB defaults apply
         const studentRecord = {
             id: userId || undefined,
             student_id: studentData.student_id || studentData.student_number || (`S-${Date.now()}`),
-            program_id: studentData.program_id || studentData.program || null,
-            year_level: studentData.year_level || 1,
-            semester: studentData.semester || 1,
-            enrollment_date: studentData.enrollment_date || null,
-            expected_graduation_date: studentData.expected_graduation_date || null,
-            gpa: studentData.gpa || 0.0,
-            total_credits_earned: studentData.total_credits_earned || 0,
-            qr_code_data: studentData.qr_code_data || null,
-            emergency_contact_name: studentData.emergency_contact_name || null,
-            emergency_contact_phone: studentData.emergency_contact_phone || null
+            year_level: studentData.year_level !== undefined ? studentData.year_level : 1,
+            semester: studentData.semester !== undefined ? studentData.semester : 1,
+            gpa: studentData.gpa !== undefined ? studentData.gpa : 0.0,
+            total_credits_earned: studentData.total_credits_earned !== undefined ? studentData.total_credits_earned : 0
         }
+
+        if (studentData.program_id || studentData.program) studentRecord.program_id = studentData.program_id || studentData.program
+        if (studentData.enrollment_date) studentRecord.enrollment_date = studentData.enrollment_date
+        if (studentData.expected_graduation_date) studentRecord.expected_graduation_date = studentData.expected_graduation_date
+        if (studentData.qr_code_data) studentRecord.qr_code_data = studentData.qr_code_data
+        if (studentData.emergency_contact_name) studentRecord.emergency_contact_name = studentData.emergency_contact_name
+        if (studentData.emergency_contact_phone) studentRecord.emergency_contact_phone = studentData.emergency_contact_phone
 
         const { data, error } = await supabase
             .from('students')
@@ -311,9 +312,76 @@ export const faculty = {
     ,
     // Create faculty (admin only)
     createFaculty: async (facultyData) => {
+        // If an email is provided, ensure there's an auth user and a users profile
+        let userId = facultyData.id || null
+
+        if (facultyData.email) {
+            const email = facultyData.email
+            const first_name = facultyData.first_name || null
+            const last_name = facultyData.last_name || null
+
+            try {
+                const password = facultyData.password || (Math.random().toString(36).slice(-10) + 'A1!')
+                const { data: signData, error: signError } = await supabase.auth.signUp({
+                    email,
+                    password,
+                    options: { data: { first_name, last_name, role: 'faculty' } }
+                })
+
+                if (signError && !signError.message?.includes('already registered')) {
+                    return { data: null, error: signError }
+                }
+
+                if (signData && signData.user && signData.user.id) {
+                    userId = signData.user.id
+                }
+            } catch (e) {
+                return { data: null, error: e }
+            }
+
+            if (!userId) {
+                const { data: existingUser, error: existingErr } = await supabase
+                    .from('users')
+                    .select('id')
+                    .eq('email', email)
+                    .maybeSingle()
+
+                if (existingErr) return { data: null, error: existingErr }
+                if (existingUser && existingUser.id) userId = existingUser.id
+            }
+
+            if (userId) {
+                const profile = {
+                    id: userId,
+                    email,
+                    first_name: first_name || '',
+                    last_name: last_name || '',
+                    role: 'faculty',
+                    status: 'active'
+                }
+                const { error: upsertErr } = await supabase
+                    .from('users')
+                    .upsert(profile, { onConflict: ['id'] })
+
+                if (upsertErr) return { data: null, error: upsertErr }
+            }
+        }
+
+        // Build faculty record and avoid inserting email column into faculty table
+        const facultyRecord = {
+            id: userId || undefined,
+            faculty_id: facultyData.faculty_id || facultyData.employee_number || (`F-${Date.now()}`),
+            department: facultyData.department || facultyData.dept || null,
+            title: facultyData.title || null,
+            office_location: facultyData.office_location || null,
+            office_hours: facultyData.office_hours || null,
+            specialization: facultyData.specialization || null,
+            hire_date: facultyData.hire_date || undefined
+        }
+
         const { data, error } = await supabase
             .from('faculty')
-            .insert(facultyData)
+            .insert(facultyRecord)
             .select()
             .single()
         return { data, error }

@@ -881,7 +881,7 @@ export default function AdminDashboard({ onLogout }) {
 
     useEffect(() => {
         window.__openAddForm = (type, defaults = {}) => setAddForm({ open: true, type, data: defaults, loading: false })
-        return () => { try { delete window.__openAddForm } catch (e) {} }
+        return () => { try { delete window.__openAddForm } catch (e) { } }
     }, [])
 
     const closeAddForm = () => setAddForm({ open: false, type: null, data: {}, loading: false })
@@ -974,8 +974,8 @@ function AddForm({ type, defaultData = {}, onCancel, onSubmit, loading, programs
     // derive helper lists
     const programOptions = (programs || []).map(p => ({ id: p.id, label: `${p.code || p.name} — ${p.name}` }))
     const deptSet = new Set()
-    ;(courses || []).forEach(c => c.department && deptSet.add(c.department))
-    ;(facultyList || []).forEach(f => f.department && deptSet.add(f.department))
+        ; (courses || []).forEach(c => c.department && deptSet.add(c.department))
+        ; (facultyList || []).forEach(f => f.department && deptSet.add(f.department))
     const departmentOptions = Array.from(deptSet).map(d => ({ id: d, label: d }))
 
     return (
@@ -1008,7 +1008,7 @@ function AddForm({ type, defaultData = {}, onCancel, onSubmit, loading, programs
                     <label className={styles.formRow}>Credits
                         <select className={styles.input} value={form.credits || ''} onChange={onChange('credits')}>
                             <option value="">— select —</option>
-                            {[1,2,3,4,5,6].map(n => <option key={n} value={n}>{n}</option>)}
+                            {[1, 2, 3, 4, 5, 6].map(n => <option key={n} value={n}>{n}</option>)}
                         </select>
                     </label>
                     <label className={styles.formRow}>Department
@@ -1042,7 +1042,7 @@ function AddForm({ type, defaultData = {}, onCancel, onSubmit, loading, programs
                     <label className={styles.formRow}>Year level
                         <select className={styles.input} value={form.year_level || ''} onChange={onChange('year_level')}>
                             <option value="">— select —</option>
-                            {[1,2,3,4,5,6].map(n => <option key={n} value={n}>{n}</option>)}
+                            {[1, 2, 3, 4, 5, 6].map(n => <option key={n} value={n}>{n}</option>)}
                         </select>
                     </label>
                 </>
