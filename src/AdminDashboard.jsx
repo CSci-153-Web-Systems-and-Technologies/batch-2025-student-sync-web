@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import styles from './AdminDashboard.module.css'
 import { useAuth, useDegreePrograms, useFaculty, useStudents, useCourses } from './hooks/useSupabase'
 import {
@@ -11,15 +11,31 @@ import {
     calendarEvents as apiCalendar
 } from './supabase'
 
-function Topbar({ name, onLogout }) {
+function Topbar({ name, onLogout, onSearch, theme, onToggleTheme }) {
     return (
         <header className={styles.topbar}>
             <div className={styles.brand}>
-                <span className={styles.shield}>🛡️</span> Admin Portal
+                <span className={styles.shield} aria-hidden>🛡️</span>
+                <div className={styles.brandText}>Admin Portal</div>
             </div>
-            <div className={styles.user}>
-                <span>Welcome, {name || 'Admin'}</span>
-                <button className={styles.logout} onClick={() => onLogout && onLogout()}>Logout</button>
+
+            <div className={styles.topbarCenter}>
+                <input
+                    className={styles.topSearch}
+                    placeholder="Search students, courses, programs..."
+                    onChange={e => onSearch && onSearch(e.target.value)}
+                    aria-label="Search admin dashboard"
+                />
+            </div>
+
+            <div className={styles.userActions}>
+                <button className={styles.iconBtn} title="Notifications" aria-label="Notifications">🔔</button>
+                <button className={styles.iconBtn} title="Quick Add" aria-label="Quick add">➕</button>
+                <button className={styles.themeBtn} onClick={onToggleTheme} aria-pressed={theme === 'dark'} title="Toggle theme">{theme === 'dark' ? '🌙' : '☀️'}</button>
+                <div className={styles.user}>
+                    <span className={styles.welcomeName}>Hi, {name || 'Admin'}</span>
+                    <button className={styles.logout} onClick={() => onLogout && onLogout()}>Logout</button>
+                </div>
             </div>
         </header>
     )
@@ -78,18 +94,7 @@ function StatCards({ totals }) {
 }
 
 function DegreePrograms({ programs = [] }) {
-    const handleAddProgram = async () => {
-        const name = window.prompt('Program name')
-        if (!name) return
-        try {
-            const { data, error } = await apiDegreePrograms.createProgram({ name })
-            if (error) throw error
-            alert('Program created')
-            window.location.reload()
-        } catch (e) {
-            alert('Error creating program: ' + (e.message || e))
-        }
-    }
+    // replaced prompt-based add with top-level form via onOpenAdd
 
     const handleImportPrograms = async () => {
         const json = window.prompt('Paste JSON array of programs')
@@ -114,7 +119,7 @@ function DegreePrograms({ programs = [] }) {
                 </div>
                 <div className={styles.headerActions}>
                     <button className={styles.secondaryBtn} onClick={handleImportPrograms}>Import Programs</button>
-                    <button className={styles.primaryBtn} onClick={handleAddProgram}>Add Programs</button>
+                    <button className={styles.primaryBtn} onClick={() => (typeof window.__openAddForm === 'function' ? window.__openAddForm('program') : null)}>Add Programs</button>
                 </div>
             </div>
             <div className={styles.programGrid}>
@@ -137,20 +142,7 @@ function DegreePrograms({ programs = [] }) {
 }
 
 function CourseManagement({ courses = [] }) {
-    const handleAddCourse = async () => {
-        const name = window.prompt('Course name')
-        if (!name) return
-        const code = window.prompt('Course code (e.g. CS101)') || ''
-        const credits = window.prompt('Credits') || '3'
-        try {
-            const { data, error } = await apiCourses.createCourse({ name, code, credits: parseInt(credits, 10) })
-            if (error) throw error
-            alert('Course created')
-            window.location.reload()
-        } catch (e) {
-            alert('Error creating course: ' + (e.message || e))
-        }
-    }
+    // replaced prompt-based add with top-level form via onOpenAdd
 
     const handleImportCourses = async () => {
         const json = window.prompt('Paste JSON array of courses')
@@ -207,7 +199,7 @@ function CourseManagement({ courses = [] }) {
                 </div>
                 <div className={styles.headerActions}>
                     <button className={styles.secondaryBtn} onClick={handleImportCourses}>Import Courses</button>
-                    <button className={styles.primaryBtn} onClick={handleAddCourse}>Add Courses</button>
+                    <button className={styles.primaryBtn} onClick={() => (typeof window.__openAddForm === 'function' ? window.__openAddForm('course') : null)}>Add Courses</button>
                 </div>
             </div>
             <div className={styles.searchBox}>
@@ -236,20 +228,7 @@ function CourseManagement({ courses = [] }) {
 }
 
 function StudentManagement({ students = [] }) {
-    const handleAddStudent = async () => {
-        const email = window.prompt('Student email')
-        if (!email) return
-        const first_name = window.prompt('First name') || ''
-        const last_name = window.prompt('Last name') || ''
-        try {
-            const { data, error } = await apiStudents.createStudent({ email, first_name, last_name })
-            if (error) throw error
-            alert('Student created')
-            window.location.reload()
-        } catch (e) {
-            alert('Error creating student: ' + (e.message || e))
-        }
-    }
+    // replaced prompt-based add with top-level form via onOpenAdd
 
     const handleImportStudents = async () => {
         const json = window.prompt('Paste JSON array of students')
@@ -275,7 +254,7 @@ function StudentManagement({ students = [] }) {
                 </div>
                 <div className={styles.headerActions}>
                     <button className={styles.secondaryBtn} onClick={handleImportStudents}>Import Students</button>
-                    <button className={styles.primaryBtn} onClick={handleAddStudent}>Add Student</button>
+                    <button className={styles.primaryBtn} onClick={() => (typeof window.__openAddForm === 'function' ? window.__openAddForm('student') : null)}>Add Student</button>
                 </div>
             </div>
             <div className={styles.searchBox}>
@@ -321,20 +300,7 @@ function StudentManagement({ students = [] }) {
 }
 
 function FacultyManagement({ faculty = [] }) {
-    const handleAddFaculty = async () => {
-        const email = window.prompt('Faculty email')
-        if (!email) return
-        const first_name = window.prompt('First name') || ''
-        const last_name = window.prompt('Last name') || ''
-        try {
-            const { data, error } = await apiFaculty.createFaculty({ email, first_name, last_name })
-            if (error) throw error
-            alert('Faculty created')
-            window.location.reload()
-        } catch (e) {
-            alert('Error creating faculty: ' + (e.message || e))
-        }
-    }
+    // replaced prompt-based add with top-level form via onOpenAdd
 
     const handleImportFaculty = async () => {
         const json = window.prompt('Paste JSON array of faculty members')
@@ -360,7 +326,7 @@ function FacultyManagement({ faculty = [] }) {
                 </div>
                 <div className={styles.headerActions}>
                     <button className={styles.secondaryBtn} onClick={handleImportFaculty}>Import Faculty</button>
-                    <button className={styles.primaryBtn} onClick={handleAddFaculty}>Add Faculty</button>
+                    <button className={styles.primaryBtn} onClick={() => (typeof window.__openAddForm === 'function' ? window.__openAddForm('faculty') : null)}>Add Faculty</button>
                 </div>
             </div>
             <div className={styles.searchBox}>
@@ -903,10 +869,52 @@ export default function AdminDashboard({ onLogout }) {
     }
 
     const adminName = user?.email?.split('@')[0]
+    const [theme, setTheme] = useState(() => {
+        try { return localStorage.getItem('admin:theme') || 'light' } catch (e) { return 'light' }
+    })
+    useEffect(() => { try { localStorage.setItem('admin:theme', theme) } catch (e) { } }, [theme])
+    const handleToggleTheme = () => setTheme(t => (t === 'dark' ? 'light' : 'dark'))
+    const handleSearch = q => { /* lightweight: could be wired to filters */ console.log('Admin search:', q) }
+
+    // Add-form state and opener exposed globally for internal callers in-file
+    const [addForm, setAddForm] = useState({ open: false, type: null, data: {}, loading: false })
+
+    useEffect(() => {
+        window.__openAddForm = (type, defaults = {}) => setAddForm({ open: true, type, data: defaults, loading: false })
+        return () => { try { delete window.__openAddForm } catch (e) { } }
+    }, [])
+
+    const closeAddForm = () => setAddForm({ open: false, type: null, data: {}, loading: false })
+
+    const handleAddSubmit = async (payload) => {
+        if (!addForm.type) return
+        setAddForm(s => ({ ...s, loading: true }))
+        try {
+            if (addForm.type === 'program') {
+                const { data, error } = await apiDegreePrograms.createProgram(payload)
+                if (error) throw error
+            } else if (addForm.type === 'course') {
+                const { data, error } = await apiCourses.createCourse(payload)
+                if (error) throw error
+            } else if (addForm.type === 'student') {
+                const { data, error } = await apiStudents.createStudent(payload)
+                if (error) throw error
+            } else if (addForm.type === 'faculty') {
+                const { data, error } = await apiFaculty.createFaculty(payload)
+                if (error) throw error
+            }
+            alert(`${addForm.type.charAt(0).toUpperCase() + addForm.type.slice(1)} created`)
+            closeAddForm()
+            window.location.reload()
+        } catch (e) {
+            alert('Error creating: ' + (e.message || e))
+            setAddForm(s => ({ ...s, loading: false }))
+        }
+    }
 
     return (
-        <div className={styles.container}>
-            <Topbar name={adminName} onLogout={onLogout} />
+        <div className={`${styles.container} ${theme === 'dark' ? styles.dark : ''}`} data-theme={theme}>
+            <Topbar name={adminName} onLogout={onLogout} onSearch={handleSearch} theme={theme} onToggleTheme={handleToggleTheme} />
             <main className={styles.main}>
                 <h1 className={styles.welcome}>Admin Dashboard</h1>
                 <p className={styles.subtitle}>Welcome back, Admin! Manage students and system settings</p>
@@ -923,7 +931,145 @@ export default function AdminDashboard({ onLogout }) {
                     {tab === 'Analytics & Reports' && <AnalyticsReports />}
                     {tab === 'Settings' && <Settings />}
                 </section>
+                {addForm.open && (
+                    <div className={styles.addOverlay} role="dialog" aria-modal="true">
+                        <div className={styles.addCard}>
+                            <div className={styles.addHeader}>
+                                <h3>Add {addForm.type}</h3>
+                                <button className={styles.closeBtn} onClick={closeAddForm} aria-label="Close">✖</button>
+                            </div>
+
+                            <AddForm
+                                type={addForm.type}
+                                defaultData={addForm.data}
+                                onCancel={closeAddForm}
+                                onSubmit={handleAddSubmit}
+                                loading={addForm.loading}
+                                programs={programs}
+                                courses={courses}
+                                facultyList={faculty}
+                            />
+                        </div>
+                    </div>
+                )}
             </main>
         </div>
+    )
+}
+
+function AddForm({ type, defaultData = {}, onCancel, onSubmit, loading, programs = [], courses = [], facultyList = [] }) {
+    const [form, setForm] = useState(defaultData || {})
+    useEffect(() => setForm(defaultData || {}), [defaultData, type])
+
+    const onChange = (k) => (e) => setForm(f => ({ ...f, [k]: e.target.value }))
+
+    const handleSubmit = (e) => {
+        e.preventDefault()
+        const payload = { ...form }
+        // normalize credits/year fields to numbers when present
+        if (payload.credits) payload.credits = parseInt(payload.credits, 10) || 0
+        onSubmit(payload)
+    }
+
+    // derive helper lists
+    const programOptions = (programs || []).map(p => ({ id: p.id, label: `${p.code || p.name} — ${p.name}` }))
+    const deptSet = new Set()
+        ; (courses || []).forEach(c => c.department && deptSet.add(c.department))
+        ; (facultyList || []).forEach(f => f.department && deptSet.add(f.department))
+    const departmentOptions = Array.from(deptSet).map(d => ({ id: d, label: d }))
+
+    return (
+        <form className={styles.addForm} onSubmit={handleSubmit}>
+            {type === 'program' && (
+                <>
+                    <label className={styles.formRow}>Name<input className={styles.input} value={form.name || ''} onChange={onChange('name')} required /></label>
+                    <label className={styles.formRow}>Code<input className={styles.input} value={form.code || ''} onChange={onChange('code')} required /></label>
+                    <label className={styles.formRow}>Department
+                        <select className={styles.input} value={departmentOptions.find(d => d.id === form.department) ? form.department : 'other'} onChange={e => {
+                            const v = e.target.value
+                            if (v === 'other') setForm(f => ({ ...f, department: '' }))
+                            else setForm(f => ({ ...f, department: v }))
+                        }}>
+                            <option value="">— select —</option>
+                            {departmentOptions.map(d => <option key={d.id} value={d.id}>{d.label}</option>)}
+                            <option value="other">Other</option>
+                        </select>
+                        {form.department === '' && <input className={styles.input} placeholder="Custom department" value={form.department || ''} onChange={onChange('department')} />}
+                    </label>
+                    <label className={styles.formRow}>Coordinator<input className={styles.input} value={form.coordinator || ''} onChange={onChange('coordinator')} /></label>
+                    <label className={styles.formRow}>Total Credits<input className={styles.input} value={form.total_credits || form.totalCredits || ''} onChange={onChange('total_credits')} /></label>
+                </>
+            )}
+
+            {type === 'course' && (
+                <>
+                    <label className={styles.formRow}>Name<input className={styles.input} value={form.name || ''} onChange={onChange('name')} required /></label>
+                    <label className={styles.formRow}>Code<input className={styles.input} value={form.code || ''} onChange={onChange('code')} /></label>
+                    <label className={styles.formRow}>Credits
+                        <select className={styles.input} value={form.credits || ''} onChange={onChange('credits')}>
+                            <option value="">— select —</option>
+                            {[1, 2, 3, 4, 5, 6].map(n => <option key={n} value={n}>{n}</option>)}
+                        </select>
+                    </label>
+                    <label className={styles.formRow}>Department
+                        <select className={styles.input} value={departmentOptions.find(d => d.id === form.dept) ? form.dept : 'other'} onChange={e => {
+                            const v = e.target.value
+                            if (v === 'other') setForm(f => ({ ...f, dept: '' }))
+                            else setForm(f => ({ ...f, dept: v }))
+                        }}>
+                            <option value="">— select —</option>
+                            {departmentOptions.map(d => <option key={d.id} value={d.id}>{d.label}</option>)}
+                            <option value="other">Other</option>
+                        </select>
+                        {form.dept === '' && <input className={styles.input} placeholder="Custom department" value={form.dept || ''} onChange={onChange('dept')} />}
+                    </label>
+                    <label className={styles.formRow}>Coordinator<input className={styles.input} value={form.coordinator || ''} onChange={onChange('coordinator')} /></label>
+                </>
+            )}
+
+            {type === 'student' && (
+                <>
+                    <label className={styles.formRow}>Email<input type="email" className={styles.input} value={form.email || ''} onChange={onChange('email')} required /></label>
+                    <label className={styles.formRow}>First name<input className={styles.input} value={form.first_name || ''} onChange={onChange('first_name')} /></label>
+                    <label className={styles.formRow}>Last name<input className={styles.input} value={form.last_name || ''} onChange={onChange('last_name')} /></label>
+                    <label className={styles.formRow}>Student ID<input className={styles.input} value={form.student_number || ''} onChange={onChange('student_number')} /></label>
+                    <label className={styles.formRow}>Program
+                        <select className={styles.input} value={form.program_id || form.program || ''} onChange={e => setForm(f => ({ ...f, program_id: e.target.value }))}>
+                            <option value="">— select program —</option>
+                            {programOptions.map(p => <option key={p.id} value={p.id}>{p.label}</option>)}
+                        </select>
+                    </label>
+                    <label className={styles.formRow}>Year level
+                        <select className={styles.input} value={form.year_level || ''} onChange={onChange('year_level')}>
+                            <option value="">— select —</option>
+                            {[1, 2, 3, 4, 5, 6].map(n => <option key={n} value={n}>{n}</option>)}
+                        </select>
+                    </label>
+                </>
+            )}
+
+            {type === 'faculty' && (
+                <>
+                    <label className={styles.formRow}>Email<input type="email" className={styles.input} value={form.email || ''} onChange={onChange('email')} required /></label>
+                    <label className={styles.formRow}>First name<input className={styles.input} value={form.first_name || ''} onChange={onChange('first_name')} /></label>
+                    <label className={styles.formRow}>Last name<input className={styles.input} value={form.last_name || ''} onChange={onChange('last_name')} /></label>
+                    <label className={styles.formRow}>Title<input className={styles.input} value={form.title || ''} onChange={onChange('title')} /></label>
+                    <label className={styles.formRow}>Department
+                        <select className={styles.input} value={form.department || ''} onChange={onChange('department')}>
+                            <option value="">— select —</option>
+                            {departmentOptions.map(d => <option key={d.id} value={d.id}>{d.label}</option>)}
+                            <option value="other">Other</option>
+                        </select>
+                        {form.department === '' && <input className={styles.input} placeholder="Custom department" value={form.department || ''} onChange={onChange('department')} />}
+                    </label>
+                    <label className={styles.formRow}>Phone<input className={styles.input} value={form.phone || ''} onChange={onChange('phone')} /></label>
+                </>
+            )}
+
+            <div className={styles.formActions}>
+                <button type="button" className={styles.secondaryBtn} onClick={onCancel}>Cancel</button>
+                <button type="submit" className={styles.primaryBtn} disabled={loading}>{loading ? 'Saving...' : 'Create'}</button>
+            </div>
+        </form>
     )
 }

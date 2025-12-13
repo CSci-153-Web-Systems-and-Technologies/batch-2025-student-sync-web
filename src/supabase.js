@@ -4,7 +4,8 @@ const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
 
 if (!supabaseUrl || !supabaseAnonKey) {
-    throw new Error('Missing Supabase environment variables. Please check your .env file.')
+    console.error('Missing Supabase environment variables. Ensure VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY are set in .env')
+    throw new Error('Missing Supabase environment variables. Please check your .env file and restart the dev server.')
 }
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
@@ -167,11 +168,88 @@ export const students = {
 
     // Create student (admin only)
     createStudent: async (studentData) => {
+        // If an email is provided, ensure there's an auth user and a users profile row
+        let userId = studentData.id || null
+
+        if (studentData.email) {
+            const email = studentData.email
+            const first_name = studentData.first_name || null
+            const last_name = studentData.last_name || null
+
+            // Try signing up the user (will fail if already exists)
+            try {
+                const password = studentData.password || (Math.random().toString(36).slice(-10) + 'A1!')
+                const { data: signData, error: signError } = await supabase.auth.signUp({
+                    email,
+                    password,
+                    options: { data: { first_name, last_name, role: 'student' } }
+                })
+
+                if (signError && !signError.message?.includes('already registered')) {
+                    return { data: null, error: signError }
+                }
+
+                if (signData && signData.user && signData.user.id) {
+                    userId = signData.user.id
+                }
+            } catch (e) {
+                return { data: null, error: e }
+            }
+
+            // If signup didn't return an id (user may already exist), try to find profile in users table
+            if (!userId) {
+                const { data: existingUser, error: existingErr } = await supabase
+                    .from('users')
+                    .select('id')
+                    .eq('email', email)
+                    .maybeSingle()
+
+                if (existingErr) return { data: null, error: existingErr }
+                if (existingUser && existingUser.id) userId = existingUser.id
+            }
+
+            // Insert profile into public.users (extend auth.users) if not already present
+            if (userId) {
+                const profile = {
+                    id: userId,
+                    email,
+                    first_name: first_name || '',
+                    last_name: last_name || '',
+                    role: 'student',
+                    status: 'active'
+                }
+                // use upsert to avoid constraint failures if profile exists
+                const { error: upsertErr } = await supabase
+                    .from('users')
+                    .upsert(profile, { onConflict: ['id'] })
+
+                if (upsertErr) return { data: null, error: upsertErr }
+            }
+        }
+
+        // Build student record, only include optional fields when provided so DB defaults apply
+        const studentRecord = {
+            id: userId || undefined,
+            student_id: studentData.student_id || studentData.student_number || (`S-${Date.now()}`),
+            year_level: studentData.year_level !== undefined ? studentData.year_level : 1,
+            semester: studentData.semester !== undefined ? studentData.semester : 1,
+            gpa: studentData.gpa !== undefined ? studentData.gpa : 0.0,
+            total_credits_earned: studentData.total_credits_earned !== undefined ? studentData.total_credits_earned : 0
+        }
+
+        if (studentData.program_id || studentData.program) studentRecord.program_id = studentData.program_id || studentData.program
+        if (studentData.enrollment_date) studentRecord.enrollment_date = studentData.enrollment_date
+        if (studentData.expected_graduation_date) studentRecord.expected_graduation_date = studentData.expected_graduation_date
+        if (studentData.qr_code_data) studentRecord.qr_code_data = studentData.qr_code_data
+        if (studentData.emergency_contact_name) studentRecord.emergency_contact_name = studentData.emergency_contact_name
+        if (studentData.emergency_contact_phone) studentRecord.emergency_contact_phone = studentData.emergency_contact_phone
+
         const { data, error } = await supabase
             .from('students')
-            .insert(studentData)
+            .insert(studentRecord)
             .select()
             .single()
+
         return { data, error }
     },
 
@@ -234,9 +312,76 @@ export const faculty = {
     ,
     // Create faculty (admin only)
     createFaculty: async (facultyData) => {
+        // If an email is provided, ensure there's an auth user and a users profile
+        let userId = facultyData.id || null
+
+        if (facultyData.email) {
+            const email = facultyData.email
+            const first_name = facultyData.first_name || null
+            const last_name = facultyData.last_name || null
+
+            try {
+                const password = facultyData.password || (Math.random().toString(36).slice(-10) + 'A1!')
+                const { data: signData, error: signError } = await supabase.auth.signUp({
+                    email,
+                    password,
+                    options: { data: { first_name, last_name, role: 'faculty' } }
+                })
+
+                if (signError && !signError.message?.includes('already registered')) {
+                    return { data: null, error: signError }
+                }
+
+                if (signData && signData.user && signData.user.id) {
+                    userId = signData.user.id
+                }
+            } catch (e) {
+                return { data: null, error: e }
+            }
+
+            if (!userId) {
+                const { data: existingUser, error: existingErr } = await supabase
+                    .from('users')
+                    .select('id')
+                    .eq('email', email)
+                    .maybeSingle()
+
+                if (existingErr) return { data: null, error: existingErr }
+                if (existingUser && existingUser.id) userId = existingUser.id
+            }
+
+            if (userId) {
+                const profile = {
+                    id: userId,
+                    email,
+                    first_name: first_name || '',
+                    last_name: last_name || '',
+                    role: 'faculty',
+                    status: 'active'
+                }
+                const { error: upsertErr } = await supabase
+                    .from('users')
+                    .upsert(profile, { onConflict: ['id'] })
+
+                if (upsertErr) return { data: null, error: upsertErr }
+            }
+        }
+
+        // Build faculty record and avoid inserting email column into faculty table
+        const facultyRecord = {
+            id: userId || undefined,
+            faculty_id: facultyData.faculty_id || facultyData.employee_number || (`F-${Date.now()}`),
+            department: facultyData.department || facultyData.dept || null,
+            title: facultyData.title || null,
+            office_location: facultyData.office_location || null,
+            office_hours: facultyData.office_hours || null,
+            specialization: facultyData.specialization || null,
+            hire_date: facultyData.hire_date || undefined
+        }
+
         const { data, error } = await supabase
             .from('faculty')
-            .insert(facultyData)
+            .insert(facultyRecord)
             .select()
             .single()
         return { data, error }
@@ -270,9 +415,26 @@ export const degreePrograms = {
 
     // Create program (admin only)
     createProgram: async (programData) => {
+        // sanitize input: map 'degree' -> 'code', coerce numbers, and avoid inserting invalid UUID for id
+        const insertData = { ...programData }
+
+        if (insertData.degree && !insertData.code) {
+            insertData.code = insertData.degree
+            delete insertData.degree
+        }
+
+        if (insertData.duration_years) insertData.duration_years = parseInt(insertData.duration_years, 10) || 0
+        if (insertData.total_credits) insertData.total_credits = parseInt(insertData.total_credits, 10) || 0
+
+        // If an 'id' was accidentally provided but is not a valid UUID, remove it to allow default generation
+        const isUuid = (v) => typeof v === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(v)
+        if (insertData.id && !isUuid(insertData.id)) {
+            delete insertData.id
+        }
+
         const { data, error } = await supabase
             .from('degree_programs')
-            .insert(programData)
+            .insert(insertData)
             .select()
             .single()
         return { data, error }
@@ -565,6 +727,24 @@ export const academicTerms = {
             .eq('is_current', true)
             .single()
         return { data, error }
+    }
+}
+
+// Quick runtime check to verify connectivity (returns { ok, data?, error? })
+export async function testConnection() {
+    try {
+        // Simple lightweight query to validate credentials and reachability
+        const { data, error } = await supabase
+            .from('users')
+            .select('id')
+            .limit(1)
+
+        if (error) {
+            return { ok: false, error }
+        }
+        return { ok: true, data }
+    } catch (err) {
+        return { ok: false, error: err }
     }
 }
 

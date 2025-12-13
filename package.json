@@ -5,12 +5,15 @@
     "scripts": {
         "dev": "vite",
         "build": "vite build",
-        "start": "vite preview"
+        "start": "vite preview",
+        "check:supabase": "node scripts/check-supabase.js"
     },
     "dependencies": {
         "@supabase/supabase-js": "^2.87.1",
+        "dotenv": "^17.2.3",
         "react": "18.2.0",
-        "react-dom": "18.2.0"
+        "react-dom": "18.2.0",
+        "supabase": "^2.67.1"
     },
     "devDependencies": {
         "vite": "^5.0.0"

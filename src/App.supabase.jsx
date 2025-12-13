@@ -148,6 +148,7 @@ function AppWithSupabase() {
     const [authLoading, setAuthLoading] = useState(false)
     const [error, setError] = useState(null)
     const [userRole, setUserRole] = useState(null)
+    const [signupOpen, setSignupOpen] = useState(false)
 
     // Fetch user role from database
     React.useEffect(() => {
@@ -288,7 +289,7 @@ function AppWithSupabase() {
                                 <p className="muted">Student Sync centralizes registration, announcements, and academic records — fast and secure.</p>
                                 <div className="landing-cta">
                                     <button className="primary" onClick={() => { setTab('signin'); setError(null) }}>Sign In</button>
-                                    <button className="secondary" onClick={() => { setTab('signup'); setError(null) }}>Create Account</button>
+                                    <button className="secondary" onClick={() => { setSignupOpen(true); setError(null) }}>Create Account</button>
                                 </div>
                                 <div style={{ marginTop: 12 }}>
                                     <OAuthButton onClick={handleGoogleSignIn}>Continue with Google</OAuthButton>
@@ -337,6 +338,7 @@ function AppWithSupabase() {
                             <button
                                 className={tab === 'signup' ? 'active' : ''}
                                 onClick={() => {
+                                    // keep legacy tab behavior, but also allow modal signup
                                     setTab('signup')
                                     setError(null)
                                 }}
@@ -374,6 +376,21 @@ function AppWithSupabase() {
                         )}
 
                         <ForgotPasswordModal open={forgotOpen} onClose={() => setForgotOpen(false)} onSubmit={handleForgotPassword} loading={forgotLoading} />
+
+                        {/* Signup modal shown from landing CTA (keeps user on same page) */}
+                        {signupOpen && (
+                            <div className="modal-backdrop" onClick={() => setSignupOpen(false)}>
+                                <div className="modal" onClick={(e) => e.stopPropagation()}>
+                                    <div className="modal-header">
+                                        <strong style={{ fontSize: 18 }}>Create Account</strong>
+                                        <button className="modal-close" onClick={() => setSignupOpen(false)}>×</button>
+                                    </div>
+                                    <div className="modal-body">
+                                        <SignupForm onSubmit={handleSignUp} loading={authLoading} />
+                                    </div>
+                                </div>
+                            </div>
+                        )}
 
                         <p className="muted" style={{ marginTop: '16px' }}>
                             {tab === 'signin'
