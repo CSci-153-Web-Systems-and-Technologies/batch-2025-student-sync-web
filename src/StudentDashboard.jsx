@@ -1,6 +1,7 @@
 import React, { useState } from 'react'
 import styles from './StudentDashboard.module.css'
 import { useAuth, useUserProfile, useStudent, useEnrollments } from './hooks/useSupabase'
+import { users as usersApi, students as studentsApi } from './supabase'
 
 function Topbar({ name, onLogout }) {
     return (
@@ -105,22 +106,83 @@ function Overview({ student, profile, loading, enrollments = [] }) {
 }
 
 function ProfileManagement({ student, profile, loading }) {
+    const [firstName, setFirstName] = React.useState(profile?.first_name || '')
+    const [lastName, setLastName] = React.useState(profile?.last_name || '')
+    const [email, setEmail] = React.useState(profile?.email || '')
+    const [phone, setPhone] = React.useState(profile?.phone || '')
+    const [address, setAddress] = React.useState(profile?.address || '')
+    const [emergencyName, setEmergencyName] = React.useState(student?.emergency_contact_name || '')
+    const [emergencyPhone, setEmergencyPhone] = React.useState(student?.emergency_contact_phone || '')
+    const [saving, setSaving] = React.useState(false)
+    const [message, setMessage] = React.useState(null)
+
+    React.useEffect(() => {
+        setFirstName(profile?.first_name || '')
+        setLastName(profile?.last_name || '')
+        setEmail(profile?.email || '')
+        setPhone(profile?.phone || '')
+        setAddress(profile?.address || '')
+        setEmergencyName(student?.emergency_contact_name || '')
+        setEmergencyPhone(student?.emergency_contact_phone || '')
+    }, [profile, student])
+
+    const handleSave = async () => {
+        setSaving(true)
+        setMessage(null)
+        try {
+            // Update users table
+            if (profile && profile.id) {
+                const { data: userData, error: userErr } = await usersApi.updateProfile(profile.id, {
+                    first_name: firstName,
+                    last_name: lastName,
+                    email: email,
+                    phone: phone,
+                    address: address
+                })
+                if (userErr) throw userErr
+            }
+
+            // Update students table (emergency contacts)
+            if (student && student.id) {
+                const { data: studentData, error: studentErr } = await studentsApi.updateStudent(student.id, {
+                    emergency_contact_name: emergencyName,
+                    emergency_contact_phone: emergencyPhone
+                })
+                if (studentErr) throw studentErr
+            }
+
+            setMessage({ type: 'success', text: 'Profile saved.' })
+        } catch (e) {
+            console.error('Save error', e)
+            setMessage({ type: 'error', text: e.message || 'Failed to save profile.' })
+        } finally {
+            setSaving(false)
+        }
+    }
+
     return (
         <div className={styles.overviewGrid}>
             <section className={styles.profileCard}>
                 <h3>Profile Information</h3>
                 <p className={styles.muted}>Update your personal information and contact details</p>
                 <div className={styles.formRow}>
-                    <div className={styles.field}><label>First Name</label><input defaultValue={profile?.first_name || ''} /></div>
-                    <div className={styles.field}><label>Last Name</label><input defaultValue={profile?.last_name || ''} /></div>
+                    <div className={styles.field}><label>First Name</label><input value={firstName} onChange={e => setFirstName(e.target.value)} /></div>
+                    <div className={styles.field}><label>Last Name</label><input value={lastName} onChange={e => setLastName(e.target.value)} /></div>
                 </div>
                 <div className={styles.dividerLine}></div>
                 <div className={styles.formRow}>
-                    <div className={styles.field}><label>Email</label><input defaultValue={profile?.email || ''} /></div>
-                    <div className={styles.field}><label>Phone</label><input defaultValue={profile?.phone || student?.phone || ''} /></div>
+                    <div className={styles.field}><label>Email</label><input value={email} onChange={e => setEmail(e.target.value)} /></div>
+                    <div className={styles.field}><label>Phone</label><input value={phone} onChange={e => setPhone(e.target.value)} /></div>
                 </div>
-                <div className={styles.field}><label>Address</label><input defaultValue={profile?.address || student?.address || ''} /></div>
-                <div className={styles.field}><label>Emergency Contact</label><input defaultValue={profile?.emergency_contact || ''} /></div>
+                <div className={styles.field}><label>Address</label><input value={address} onChange={e => setAddress(e.target.value)} /></div>
+                <div className={styles.field}><label>Emergency Contact Name</label><input value={emergencyName} onChange={e => setEmergencyName(e.target.value)} /></div>
+                <div className={styles.field}><label>Emergency Contact Phone</label><input value={emergencyPhone} onChange={e => setEmergencyPhone(e.target.value)} /></div>
+                <div style={{ marginTop: 12 }}>
+                    <button className={styles.actionBtn} onClick={handleSave} disabled={saving}>{saving ? 'Saving...' : 'Save Changes'}</button>
+                    {message && (
+                        <span style={{ marginLeft: 12, color: message.type === 'error' ? 'crimson' : 'green' }}>{message.text}</span>
+                    )}
+                </div>
             </section>
 
             <aside className={styles.sideCol}>
