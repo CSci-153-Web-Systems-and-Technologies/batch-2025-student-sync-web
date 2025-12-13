@@ -95,19 +95,38 @@ function StatCards({ totals }) {
 
 function DegreePrograms({ programs = [] }) {
     // replaced prompt-based add with top-level form via onOpenAdd
+    const [importOpen, setImportOpen] = React.useState(false)
+    const [importJson, setImportJson] = React.useState('')
+    const [importing, setImporting] = React.useState(false)
+    const [importResult, setImportResult] = React.useState(null)
 
     const handleImportPrograms = async () => {
-        const json = window.prompt('Paste JSON array of programs')
-        if (!json) return
+        if (!importJson) return alert('Paste the JSON array of programs in the textarea')
+        let arr
         try {
-            const arr = JSON.parse(json)
-            for (const p of arr) {
-                await apiDegreePrograms.createProgram(p)
-            }
-            alert('Imported programs')
-            window.location.reload()
+            arr = JSON.parse(importJson)
+            if (!Array.isArray(arr)) throw new Error('Expected a JSON array')
         } catch (e) {
-            alert('Import failed: ' + (e.message || e))
+            return alert('Invalid JSON: ' + (e.message || e))
+        }
+
+        setImporting(true)
+        const results = { success: 0, failed: 0, errors: [] }
+        for (const p of arr) {
+            try {
+                const { data, error } = await apiDegreePrograms.createProgram(p)
+                if (error) throw error
+                results.success += 1
+            } catch (e) {
+                results.failed += 1
+                results.errors.push({ program: p, error: e.message || String(e) })
+            }
+        }
+        setImporting(false)
+        setImportResult(results)
+        if (results.failed === 0) {
+            alert(`Imported ${results.success} programs`)
+            window.location.reload()
         }
     }
     return (
@@ -118,10 +137,40 @@ function DegreePrograms({ programs = [] }) {
                     <p className={styles.muted}>Click on any program to view all students enrolled in that degree program</p>
                 </div>
                 <div className={styles.headerActions}>
-                    <button className={styles.secondaryBtn} onClick={handleImportPrograms}>Import Programs</button>
+                    <button className={styles.secondaryBtn} onClick={() => setImportOpen(o => !o)}>{importOpen ? 'Close Import' : 'Import Programs'}</button>
                     <button className={styles.primaryBtn} onClick={() => (typeof window.__openAddForm === 'function' ? window.__openAddForm('program') : null)}>Add Programs</button>
                 </div>
             </div>
+            {importOpen && (
+                <div className={styles.importCard} style={{ margin: '16px 0', padding: 12, borderRadius: 8, background: '#fff', border: '1px solid #eee' }}>
+                    <h4 style={{ marginTop: 0 }}>Import Programs (JSON array)</h4>
+                    <textarea
+                        className={styles.input}
+                        placeholder='Paste JSON array, e.g. [{"name":"Computer Science","code":"CS"}, ...]'
+                        value={importJson}
+                        onChange={e => setImportJson(e.target.value)}
+                        rows={6}
+                        style={{ width: '100%', fontFamily: 'monospace' }}
+                    />
+                    <div style={{ marginTop: 8, display: 'flex', gap: 8 }}>
+                        <button className={styles.primaryBtn} onClick={handleImportPrograms} disabled={importing}>{importing ? 'Importing…' : 'Import'}</button>
+                        <button className={styles.secondaryBtn} onClick={() => { setImportOpen(false); setImportJson(''); setImportResult(null) }}>Cancel</button>
+                        <button className={styles.secondaryBtn} onClick={() => setImportJson('[{"name":"Example Program","code":"EX"}]')}>Insert Example</button>
+                    </div>
+                    {importResult && (
+                        <div style={{ marginTop: 8 }}>
+                            <div>Success: {importResult.success}</div>
+                            <div>Failed: {importResult.failed}</div>
+                            {importResult.errors && importResult.errors.length > 0 && (
+                                <details style={{ marginTop: 6 }}>
+                                    <summary>Errors</summary>
+                                    <pre style={{ whiteSpace: 'pre-wrap', fontSize: 12 }}>{JSON.stringify(importResult.errors, null, 2)}</pre>
+                                </details>
+                            )}
+                        </div>
+                    )}
+                </div>
+            )}
             <div className={styles.programGrid}>
                 {(programs || []).map((prog, i) => (
                     <div key={prog.id || i} className={styles.programCard}>
