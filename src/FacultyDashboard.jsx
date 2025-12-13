@@ -1,5 +1,7 @@
 import React, { useState } from 'react'
 import styles from './StudentDashboard.module.css'
+import { supabase } from './supabase'
+import { canEnrollInSection } from './utils/supabaseUtils'
 
 function Topbar({ name, onLogout }) {
     return (
@@ -138,17 +140,111 @@ export default function FacultyDashboard({ onLogout, initialFaculty }) {
         ]
     }
 
-    const openRoster = (s) => {
-        setRoster([
-            { id: 1, name: 'Student A', email: 'a@example.com' },
-            { id: 2, name: 'Student B', email: 'b@example.com' }
-        ])
+    const openRoster = async (s) => {
+        // Fetch roster for the selected section (joined with student user profile)
+        try {
+            const { data, error } = await supabase
+                .from('enrollments')
+                .select(`id, status, grade, student:students(id,student_id,program_id,total_credits_earned, user:users(id,first_name,last_name,email))`)
+                .eq('section_id', s.id)
+                .order('created_at', { ascending: true })
+
+            if (error) {
+                console.error('Error fetching roster', error)
+                setRoster([])
+            } else {
+                const mapped = (data || []).map(r => ({
+                    id: r.id,
+                    name: r.student?.user ? `${r.student.user.first_name} ${r.student.user.last_name}` : r.student?.student_id,
+                    email: r.student?.user?.email || '',
+                    studentId: r.student?.student_id,
+                    status: r.status
+                }))
+                setRoster(mapped)
+            }
+        } catch (e) {
+            console.error('Roster fetch failed', e)
+            setRoster([])
+        }
+
+        // store current section in state for enrollment actions
+        setCurrentSection(s)
         setRosterOpen(true)
     }
 
     const closeRoster = () => {
         setRosterOpen(false)
         setRoster([])
+    }
+
+    const [currentSection, setCurrentSection] = useState(null)
+    const [searchIdentifier, setSearchIdentifier] = useState('')
+    const [actionMsg, setActionMsg] = useState(null)
+
+    const findStudentByIdentifier = async (identifier) => {
+        if (!identifier) return null
+        try {
+            // If email
+            if (identifier.includes('@')) {
+                const { data: user } = await supabase
+                    .from('users')
+                    .select('id')
+                    .eq('email', identifier)
+                    .single()
+                if (!user) return null
+                const { data: student } = await supabase
+                    .from('students')
+                    .select('*')
+                    .eq('id', user.id)
+                    .single()
+                return student
+            }
+
+            // Otherwise assume student_id
+            const { data: studentById } = await supabase
+                .from('students')
+                .select('*')
+                .eq('student_id', identifier)
+                .single()
+            return studentById
+        } catch (e) {
+            console.error('findStudent error', e)
+            return null
+        }
+    }
+
+    const handleAddStudent = async () => {
+        setActionMsg(null)
+        if (!currentSection) return setActionMsg({ type: 'error', text: 'No section selected' })
+        const identifier = searchIdentifier.trim()
+        if (!identifier) return setActionMsg({ type: 'error', text: 'Enter student email or ID' })
+
+        setActionMsg({ type: 'info', text: 'Searching student...' })
+        const student = await findStudentByIdentifier(identifier)
+        if (!student) return setActionMsg({ type: 'error', text: 'Student not found' })
+
+        // Check enrollment rules
+        try {
+            const can = await canEnrollInSection(student.id, currentSection.id)
+            if (!can.canEnroll) return setActionMsg({ type: 'error', text: `Cannot enroll: ${can.reason || 'restriction'}` })
+
+            // Create enrollment
+            const { data: enrollData, error: enrollErr } = await supabase
+                .from('enrollments')
+                .insert({ student_id: student.id, section_id: currentSection.id, status: 'enrolled' })
+                .select()
+                .single()
+
+            if (enrollErr) throw enrollErr
+
+            // Refresh roster
+            await openRoster(currentSection)
+            setSearchIdentifier('')
+            setActionMsg({ type: 'success', text: 'Student enrolled' })
+        } catch (e) {
+            console.error('Enrollment failed', e)
+            setActionMsg({ type: 'error', text: e.message || 'Enrollment failed' })
+        }
     }
 
     return (
@@ -174,10 +270,22 @@ export default function FacultyDashboard({ onLogout, initialFaculty }) {
                             <button className="modal-close" onClick={closeRoster}>✕</button>
                         </div>
                         <div className="modal-body">
+                            <div style={{ marginBottom: 12 }}>
+                                <label style={{ display: 'block', fontSize: 13, marginBottom: 6 }}>Add student by email or student ID</label>
+                                <div style={{ display: 'flex', gap: 8 }}>
+                                    <input style={{ flex: 1, padding: '8px 10px' }} value={searchIdentifier} onChange={e => setSearchIdentifier(e.target.value)} placeholder="student@example.com or 22-1-01580" />
+                                    <button className={styles.actionBtn} onClick={handleAddStudent}>Add Student</button>
+                                </div>
+                                {actionMsg && (
+                                    <div style={{ marginTop: 8, color: actionMsg.type === 'error' ? 'crimson' : (actionMsg.type === 'success' ? 'green' : '#444') }}>{actionMsg.text}</div>
+                                )}
+                            </div>
+
                             {(roster || []).map(r => (
                                 <div key={r.id} style={{ padding: 8, borderBottom: '1px solid #f2f2f2' }}>
                                     <div style={{ fontWeight: 600 }}>{r.name}</div>
-                                    <div style={{ fontSize: 13, color: '#666' }}>{r.email}</div>
+                                    <div style={{ fontSize: 13, color: '#666' }}>{r.email} {r.studentId ? `• ${r.studentId}` : ''}</div>
+                                    <div style={{ fontSize: 12, color: '#777' }}>Status: {r.status}</div>
                                 </div>
                             ))}
                         </div>
