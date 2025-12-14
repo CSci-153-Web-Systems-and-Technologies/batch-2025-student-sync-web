@@ -7,8 +7,11 @@ import {
     auth as apiAuth,
     students as apiStudents,
     faculty as apiFaculty,
+    users as apiUsers,
     announcements as apiAnnouncements,
     calendarEvents as apiCalendar
+    ,
+    courseSections as apiCourseSections
 } from './supabase'
 
 function Topbar({ name, onLogout, onSearch, theme, onToggleTheme }) {
@@ -28,7 +31,7 @@ function Topbar({ name, onLogout, onSearch, theme, onToggleTheme }) {
                 />
             </div>
 
-                <div className={styles.userActions}>
+            <div className={styles.userActions}>
                 <button className={styles.iconBtn} title="Notifications" aria-label="Notifications">🔔</button>
                 <button className={styles.iconBtn} title="Quick Add" aria-label="Quick add" onClick={() => (typeof window.__openAddForm === 'function' ? window.__openAddForm('program') : null)}>➕</button>
                 <button className={styles.themeBtn} onClick={onToggleTheme} aria-pressed={theme === 'dark'} title="Toggle theme">{theme === 'dark' ? '🌙' : '☀️'}</button>
@@ -95,6 +98,73 @@ function StatCards({ totals }) {
 
 function DegreePrograms({ programs = [] }) {
     // replaced prompt-based add with top-level form via onOpen
+    const [viewing, setViewing] = React.useState(null)
+    const [studentsList, setStudentsList] = React.useState([])
+    const [loadingStudents, setLoadingStudents] = React.useState(false)
+    const [editingProgram, setEditingProgram] = React.useState(null)
+    const [savingEdit, setSavingEdit] = React.useState(false)
+
+    const viewProgram = async (prog) => {
+        console.log('viewProgram clicked', prog && (prog.id || prog.name))
+        setViewing(prog)
+        setLoadingStudents(true)
+        try {
+            const { data, error } = await apiStudents.getStudents({ programId: prog.id })
+            if (error) throw error
+            setStudentsList(data || [])
+        } catch (e) {
+            alert('Failed loading students: ' + (e.message || e))
+            setStudentsList([])
+        } finally {
+            setLoadingStudents(false)
+        }
+    }
+
+    const closeView = () => {
+        setViewing(null)
+        setStudentsList([])
+    }
+
+    const startEdit = (prog) => setEditingProgram({ ...prog })
+    const _startEdit = (prog) => { console.log('startEdit clicked', prog && (prog.id || prog.name)); return startEdit(prog) }
+    const cancelEdit = () => setEditingProgram(null)
+
+    const saveEdit = async () => {
+        if (!editingProgram || !editingProgram.id) return
+        setSavingEdit(true)
+        try {
+            const updates = {
+                name: editingProgram.name,
+                department: editingProgram.department,
+                coordinator: editingProgram.coordinator,
+                credits: editingProgram.credits || editingProgram.total_credits || editingProgram.totalCredits
+            }
+            const { data, error } = await apiDegreePrograms.updateProgram(editingProgram.id, updates)
+            if (error) throw error
+            alert('Program updated')
+            setEditingProgram(null)
+            window.location.reload()
+        } catch (e) {
+            alert('Failed updating program: ' + (e.message || e))
+        } finally {
+            setSavingEdit(false)
+        }
+    }
+
+    const deleteProgram = async (prog) => {
+        console.log('deleteProgram clicked', prog && (prog.id || prog.name))
+        if (!prog || !prog.id) return
+        if (!confirm('Deactivate this program? This will hide it from listings.')) return
+        try {
+            const { data, error } = await apiDegreePrograms.updateProgram(prog.id, { is_active: false })
+            if (error) throw error
+            alert('Program deactivated')
+            window.location.reload()
+        } catch (e) {
+            alert('Failed deactivating program: ' + (e.message || e))
+        }
+    }
+
     return (
         <div className={styles.contentSection}>
             <div className={styles.sectionHeader}>
@@ -117,17 +187,118 @@ function DegreePrograms({ programs = [] }) {
                             <div className={styles.detailItem}>Credits Required: {prog.credits || prog.credit_hours || '—'}</div>
                             <div className={styles.detailItem}>Enrollment: {prog.enrollment_count ?? prog.enrollment ?? '-'} students</div>
                         </div>
-                        <button className={styles.viewBtn}>View Student Program</button>
+                        <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
+                            <button className={styles.viewBtn} onClick={() => viewProgram(prog)}>View Students</button>
+                            <button className={styles.actionBtnSecondary} onClick={() => _startEdit(prog)}>✏️ Edit</button>
+                            <button className={styles.dangerBtn} onClick={() => deleteProgram(prog)}>🗑️ Delete</button>
+                        </div>
                     </div>
                 ))}
             </div>
+            <button className={styles.viewBtn} onClick={() => viewCourse(course)}>View</button>
+            {viewing && (
+                <div className={styles.addOverlay} role="dialog" aria-modal="true">
+                    <div className={styles.addCard} style={{ maxWidth: 800 }}>
+                        <div className={styles.addHeader}>
+                            <h3>Students in {viewing.name}</h3>
+                            <button className={styles.closeBtn} onClick={closeView} aria-label="Close">✖</button>
+                        </div>
+                        <div style={{ padding: 12 }}>
+                            {loadingStudents ? <div>Loading…</div> : (
+                                <div style={{ maxHeight: 360, overflowY: 'auto' }}>
+                                    {(studentsList || []).length === 0 ? <div className={styles.muted}>No students found for this program.</div> : (
+                                        (studentsList || []).map(s => (
+                                            <div key={s.id || s.student_id} style={{ padding: 8, borderBottom: '1px solid #eee' }}>
+                                                <strong>{(s.user && `${s.user.first_name || ''} ${s.user.last_name || ''}`) || s.full_name || s.student_number || s.id}</strong>
+                                                <div style={{ fontSize: 13, color: '#666' }}>{s.student_number || s.student_id || ''} — Year {s.year_level || '—'}</div>
+                                            </div>
+                                        ))
+                                    )}
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {editingProgram && (
+                <div className={styles.addOverlay} role="dialog" aria-modal="true">
+                    <div className={styles.addCard} style={{ maxWidth: 700 }}>
+                        <div className={styles.addHeader}>
+                            <h3>Edit Program — {editingProgram.name}</h3>
+                            <button className={styles.closeBtn} onClick={cancelEdit} aria-label="Close">✖</button>
+                        </div>
+                        <div style={{ padding: 12 }}>
+                            <label className={styles.formRow}>Name<input className={styles.input} value={editingProgram.name || ''} onChange={e => setEditingProgram(p => ({ ...p, name: e.target.value }))} /></label>
+                            <label className={styles.formRow}>Department<input className={styles.input} value={editingProgram.department || ''} onChange={e => setEditingProgram(p => ({ ...p, department: e.target.value }))} /></label>
+                            <label className={styles.formRow}>Coordinator<input className={styles.input} value={editingProgram.coordinator || ''} onChange={e => setEditingProgram(p => ({ ...p, coordinator: e.target.value }))} /></label>
+                            <label className={styles.formRow}>Credits<input className={styles.input} value={editingProgram.credits || editingProgram.total_credits || ''} onChange={e => setEditingProgram(p => ({ ...p, credits: e.target.value }))} /></label>
+                            <div style={{ marginTop: 12, display: 'flex', gap: 8 }}>
+                                <button className={styles.primaryBtn} onClick={saveEdit} disabled={savingEdit}>{savingEdit ? 'Saving…' : 'Save'}</button>
+                                <button className={styles.secondaryBtn} onClick={cancelEdit}>Cancel</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     )
 }
 
 function CourseManagement({ courses = [] }) {
     // replaced prompt-based add with top-level form via onOpenAdd
+    const [viewingCourse, setViewingCourse] = React.useState(null)
+    const [editingCourse, setEditingCourse] = React.useState(null)
+    const [savingCourse, setSavingCourse] = React.useState(false)
 
+    const viewCourse = async (course) => {
+        console.log('viewCourse clicked', course && (course.id || course.name))
+        // open a simple details modal; could fetch more data if needed
+        setViewingCourse(course)
+    }
+
+    const closeViewCourse = () => setViewingCourse(null)
+
+    const startEditCourse = (course) => setEditingCourse({ ...course })
+    const _startEditCourse = (course) => { console.log('startEditCourse clicked', course && (course.id || course.name)); return startEditCourse(course) }
+    const cancelEditCourse = () => setEditingCourse(null)
+
+    const saveCourseEdit = async () => {
+        if (!editingCourse || !editingCourse.id) return
+        setSavingCourse(true)
+        try {
+            const updates = {
+                name: editingCourse.name,
+                code: editingCourse.code,
+                credits: editingCourse.credits || editingCourse.credit_hours,
+                department: editingCourse.dept || editingCourse.department,
+                coordinator: editingCourse.coordinator
+            }
+            const { data, error } = await apiCourses.updateCourse(editingCourse.id, updates)
+            if (error) throw error
+            alert('Course updated')
+            setEditingCourse(null)
+            window.location.reload()
+        } catch (e) {
+            alert('Failed updating course: ' + (e.message || e))
+        } finally {
+            setSavingCourse(false)
+        }
+    }
+
+    const deleteCourse = async (course) => {
+        console.log('deleteCourse clicked', course && (course.id || course.name))
+        if (!course || !course.id) return
+        if (!confirm('Deactivate this course? This will hide it from listings.')) return
+        try {
+            const { data, error } = await apiCourses.updateCourse(course.id, { is_active: false })
+            if (error) throw error
+            alert('Course deactivated')
+            window.location.reload()
+        } catch (e) {
+            alert('Failed deactivating course: ' + (e.message || e))
+        }
+    }
 
     return (
         <div className={styles.contentSection}>
@@ -176,7 +347,7 @@ function CourseManagement({ courses = [] }) {
             </div>
             <div className={styles.programGrid}>
                 {(courses || []).map((course, i) => (
-                    <div key={i} className={styles.programCard}>
+                    <div key={course.id || i} className={styles.programCard}>
                         <h4>{course.name}</h4>
                         <div className={styles.programDegree}>{course.degree}</div>
                         <div className={styles.programDetails}>
@@ -188,18 +359,123 @@ function CourseManagement({ courses = [] }) {
                         <div className={styles.progressBar}>
                             <div className={styles.progressFill} style={{ width: `${course.fillPercent || 0}%` }}></div>
                         </div>
-                        <button className={styles.viewBtn}>View Course Detail</button>
+                        <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
+                            <button className={styles.viewBtn} onClick={() => viewCourse(course)}>View Details</button>
+                            <button className={styles.actionBtnSecondary} onClick={() => _startEditCourse(course)}>✏️ Edit</button>
+                            <button className={styles.dangerBtn} onClick={() => deleteCourse(course)}>🗑️ Delete</button>
+                        </div>
                     </div>
                 ))}
             </div>
+
+            {viewingCourse && (
+                <div className={styles.addOverlay} role="dialog" aria-modal="true">
+                    <div className={styles.addCard} style={{ maxWidth: 700 }}>
+                        <div className={styles.addHeader}>
+                            <h3>Course Details — {viewingCourse.name}</h3>
+                            <button className={styles.closeBtn} onClick={closeViewCourse} aria-label="Close">✖</button>
+                        </div>
+                        <div style={{ padding: 12 }}>
+                            <div className={styles.formRow}><strong>Code:</strong> {viewingCourse.code || viewingCourse.id}</div>
+                            <div className={styles.formRow}><strong>Department:</strong> {viewingCourse.dept || viewingCourse.department || '—'}</div>
+                            <div className={styles.formRow}><strong>Credits:</strong> {viewingCourse.credits || viewingCourse.credit_hours || '—'}</div>
+                            <div className={styles.formRow}><strong>Coordinator:</strong> {viewingCourse.coordinator || '—'}</div>
+                            <div className={styles.formRow}><strong>Enrollment:</strong> {viewingCourse.enrollment ?? viewingCourse.enrollment_count ?? '-'}</div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {editingCourse && (
+                <div className={styles.addOverlay} role="dialog" aria-modal="true">
+                    <div className={styles.addCard} style={{ maxWidth: 700 }}>
+                        <div className={styles.addHeader}>
+                            <h3>Edit Course — {editingCourse.name}</h3>
+                            <button className={styles.closeBtn} onClick={cancelEditCourse} aria-label="Close">✖</button>
+                        </div>
+                        <div style={{ padding: 12 }}>
+                            <label className={styles.formRow}>Name<input className={styles.input} value={editingCourse.name || ''} onChange={e => setEditingCourse(c => ({ ...c, name: e.target.value }))} /></label>
+                            <label className={styles.formRow}>Code<input className={styles.input} value={editingCourse.code || ''} onChange={e => setEditingCourse(c => ({ ...c, code: e.target.value }))} /></label>
+                            <label className={styles.formRow}>Department<input className={styles.input} value={editingCourse.dept || editingCourse.department || ''} onChange={e => setEditingCourse(c => ({ ...c, dept: e.target.value, department: e.target.value }))} /></label>
+                            <label className={styles.formRow}>Credits<input className={styles.input} value={editingCourse.credits || editingCourse.credit_hours || ''} onChange={e => setEditingCourse(c => ({ ...c, credits: e.target.value }))} /></label>
+                            <label className={styles.formRow}>Coordinator<input className={styles.input} value={editingCourse.coordinator || ''} onChange={e => setEditingCourse(c => ({ ...c, coordinator: e.target.value }))} /></label>
+                            <div style={{ marginTop: 12, display: 'flex', gap: 8 }}>
+                                <button className={styles.primaryBtn} onClick={saveCourseEdit} disabled={savingCourse}>{savingCourse ? 'Saving…' : 'Save'}</button>
+                                <button className={styles.secondaryBtn} onClick={cancelEditCourse}>Cancel</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     )
 }
 
 function StudentManagement({ students = [] }) {
     // replaced prompt-based add with top-level form via onOpenAdd
+    const [viewingStudent, setViewingStudent] = React.useState(null)
+    const [editingStudent, setEditingStudent] = React.useState(null)
+    const [savingStudent, setSavingStudent] = React.useState(false)
+    const [loadingStudentDetails, setLoadingStudentDetails] = React.useState(false)
 
-    
+    const viewStudent = async (s) => {
+        console.log('viewStudent clicked', s && (s.id || s.student_number || s.full_name))
+        // open details modal; could load more info if needed
+        setViewingStudent(s)
+    }
+
+    const closeViewStudent = () => setViewingStudent(null)
+
+    const startEditStudent = (s) => setEditingStudent(s?.id ? { ...s } : null)
+    const _startEditStudent = (s) => { console.log('startEditStudent clicked', s && (s.id || s.student_number || s.full_name)); return startEditStudent(s) }
+    const cancelEditStudent = () => setEditingStudent(null)
+
+    const saveStudentEdit = async () => {
+        if (!editingStudent || !editingStudent.id) return
+        setSavingStudent(true)
+        try {
+            // Update user profile if present
+            if (editingStudent.user && editingStudent.user.id) {
+                const uUpdates = {
+                    first_name: editingStudent.user.first_name,
+                    last_name: editingStudent.user.last_name,
+                    email: editingStudent.user.email
+                }
+                const { data: udata, error: uerr } = await apiUsers.updateProfile(editingStudent.user.id, uUpdates)
+                if (uerr) console.warn('User update error', uerr)
+            }
+
+            const sUpdates = {
+                student_number: editingStudent.student_number || editingStudent.student_id,
+                year_level: editingStudent.year_level,
+                gpa: editingStudent.gpa,
+                status: editingStudent.status
+            }
+            const { data, error } = await apiStudents.updateStudent(editingStudent.id, sUpdates)
+            if (error) throw error
+            alert('Student updated')
+            setEditingStudent(null)
+            window.location.reload()
+        } catch (e) {
+            alert('Failed updating student: ' + (e.message || e))
+        } finally {
+            setSavingStudent(false)
+        }
+    }
+
+    const deactivateStudent = async (s) => {
+        console.log('deactivateStudent clicked', s && (s.id || s.student_number || s.full_name))
+        if (!s || !s.id) return
+        if (!confirm('Deactivate this student? This will mark the student inactive.')) return
+        try {
+            const { data, error } = await apiStudents.updateStudent(s.id, { is_active: false, status: 'inactive' })
+            if (error) throw error
+            alert('Student deactivated')
+            window.location.reload()
+        } catch (e) {
+            alert('Failed deactivating student: ' + (e.message || e))
+        }
+    }
 
     return (
         <div className={styles.contentSection}>
@@ -209,8 +485,8 @@ function StudentManagement({ students = [] }) {
                     <p className={styles.muted}>Search and manage student records</p>
                 </div>
                 <div className={styles.headerActions}>
-                        <button className={styles.primaryBtn} onClick={() => (typeof window.__openAddForm === 'function' ? window.__openAddForm('student') : null)}>Add Student</button>
-                    </div>
+                    <button className={styles.primaryBtn} onClick={() => (typeof window.__openAddForm === 'function' ? window.__openAddForm('student') : null)}>Add Student</button>
+                </div>
             </div>
             <div className={styles.searchBox}>
                 <input placeholder="🔍 Search students..." />
@@ -245,7 +521,11 @@ function StudentManagement({ students = [] }) {
                                 {s.notes || ''}
                             </div>
 
-                            <button className={styles.viewBtn}>View Student</button>
+                            <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
+                                <button className={styles.viewBtn} onClick={() => viewStudent(s)}>View</button>
+                                <button className={styles.actionBtnSecondary} onClick={() => _startEditStudent(s)}>✏️ Edit</button>
+                                <button className={styles.dangerBtn} onClick={() => deactivateStudent(s)}>🗑️ Deactivate</button>
+                            </div>
                         </div>
                     )
                 })}
@@ -256,6 +536,131 @@ function StudentManagement({ students = [] }) {
 
 function FacultyManagement({ faculty = [] }) {
     // replaced prompt-based add with top-level form via onOpenAdd
+    const [editingFaculty, setEditingFaculty] = React.useState(null)
+    const [sections, setSections] = React.useState([])
+    const [loadingSections, setLoadingSections] = React.useState(false)
+    const [selectedSectionIds, setSelectedSectionIds] = React.useState([])
+    const [savingFaculty, setSavingFaculty] = React.useState(false)
+
+    const openEdit = async (f) => {
+        setEditingFaculty(f)
+        setSavingFaculty(false)
+        // load all sections and mark those assigned to this faculty
+        setLoadingSections(true)
+        try {
+            const { data } = await apiCourseSections.getSections()
+            setSections(data || [])
+            const assigned = (data || []).filter(s => s.faculty && s.faculty.id === f.id).map(s => s.id)
+            setSelectedSectionIds(assigned)
+        } catch (e) {
+            console.error('Failed to load sections', e)
+            setSections([])
+            setSelectedSectionIds([])
+        } finally {
+            setLoadingSections(false)
+        }
+    }
+
+    const closeEdit = () => {
+        setEditingFaculty(null)
+        setSelectedSectionIds([])
+    }
+
+    const _openEdit = (f) => { console.log('openEdit clicked', f && (f.id || (f.user && `${f.user.first_name || ''} ${f.user.last_name || ''}`))); return openEdit(f) }
+
+    const [viewingSchedule, setViewingSchedule] = React.useState(null)
+    const _viewSchedule = (f) => { console.log('viewSchedule clicked', f && (f.id || (f.user && `${f.user.first_name || ''} ${f.user.last_name || ''}`))); return viewSchedule(f) }
+    const viewSchedule = (f) => {
+        setViewingSchedule(f)
+    }
+    const closeSchedule = () => setViewingSchedule(null)
+
+    const deactivateFaculty = async (f) => {
+        console.log('deactivateFaculty clicked', f && (f.id || f.user?.email))
+        if (!f || !f.id) return
+        if (!confirm('Deactivate this faculty member?')) return
+        try {
+            const { data, error } = await apiFaculty.updateFaculty(f.id, { is_active: false })
+            if (error) throw error
+            alert('Faculty deactivated')
+            window.location.reload()
+        } catch (e) {
+            alert('Failed deactivating faculty: ' + (e.message || e))
+        }
+    }
+
+    const reactivateFaculty = async (f) => {
+        console.log('reactivateFaculty clicked', f && (f.id || f.user?.email))
+        if (!f || !f.id) return
+        try {
+            const { data, error } = await apiFaculty.updateFaculty(f.id, { is_active: true })
+            if (error) throw error
+            alert('Faculty reactivated')
+            window.location.reload()
+        } catch (e) {
+            alert('Failed reactivating faculty: ' + (e.message || e))
+        }
+    }
+
+    const toggleSection = (sectionId) => {
+        setSelectedSectionIds(prev => prev.includes(sectionId) ? prev.filter(id => id !== sectionId) : [...prev, sectionId])
+    }
+
+    const saveFacultyAssignments = async () => {
+        if (!editingFaculty) return
+        setSavingFaculty(true)
+        try {
+            // For simplicity, update course_sections to set faculty_id where selected, and clear faculty_id where unselected
+            // Assign selected sections (set faculty_id)
+            for (const id of selectedSectionIds) {
+                const { data, error } = await apiCourseSectionsRawUpdate(id, editingFaculty.id)
+                if (error) throw error
+            }
+
+            // clear faculty_id on sections not selected but previously assigned to this faculty
+            const unassign = (sections || []).filter(s => s.faculty && s.faculty.id === editingFaculty.id && !selectedSectionIds.includes(s.id)).map(s => s.id)
+            for (const id of unassign) {
+                await apiCourseSectionsRawUpdate(id, null)
+            }
+
+            // Update faculty table (department, title)
+            if (editingFaculty && editingFaculty.id) {
+                const updates = { department: editingFaculty.department, title: editingFaculty.title }
+                const { data, error } = await apiFaculty.updateFaculty(editingFaculty.id, updates)
+                if (error) throw error
+            }
+
+            // Update linked users profile (name, email, phone) if present
+            try {
+                const uid = editingFaculty.id
+                if (uid && editingFaculty.user) {
+                    const { first_name, last_name, email, phone } = editingFaculty.user
+                    const { data: udata, error: uerr } = await apiUsers.updateProfile(uid, { first_name, last_name, email, phone })
+                    if (uerr) throw uerr
+                }
+            } catch (ue) {
+                console.warn('Failed updating user profile', ue)
+            }
+
+            closeEdit()
+        } catch (e) {
+            console.error('Failed saving faculty assignments', e)
+            alert('Failed saving assignments: ' + (e.message || e))
+        } finally {
+            setSavingFaculty(false)
+        }
+    }
+
+    // helper using supabase client directly to update course_sections.faculty_id
+    const apiCourseSectionsRawUpdate = async (sectionId, facultyId) => {
+        const { data, error } = await (await import('./supabase')).default
+            .from('course_sections')
+            .update({ faculty_id: facultyId })
+            .eq('id', sectionId)
+            .select()
+            .single()
+        return { data, error }
+    }
 
     return (
         <div className={styles.contentSection}>
@@ -320,12 +725,81 @@ function FacultyManagement({ faculty = [] }) {
                             </div>
 
                             <div className={styles.facultyActions}>
-                                <button className={styles.actionBtnSecondary}>✏️ Edit Profile</button>
-                                <button className={styles.actionBtnSecondary}>📋 View Schedule</button>
+                                <button className={styles.actionBtnSecondary} onClick={() => _openEdit(f)}>✏️ Edit Profile</button>
+                                <button className={styles.actionBtnSecondary} onClick={() => _viewSchedule(f)}>📋 View Schedule</button>
+                                {f.is_active === false ? (
+                                    <button className={styles.primaryBtn} onClick={() => reactivateFaculty(f)}>↺ Reactivate</button>
+                                ) : (
+                                    <button className={styles.dangerBtn} onClick={() => deactivateFaculty(f)}>🗑️ Deactivate</button>
+                                )}
                             </div>
                         </div>
                     )
                 })}
+
+                {viewingSchedule && (
+                    <div className={styles.addOverlay} role="dialog" aria-modal="true">
+                        <div className={styles.addCard} style={{ maxWidth: 700 }}>
+                            <div className={styles.addHeader}>
+                                <h3>Schedule — {(viewingSchedule.user ? `${viewingSchedule.user.first_name || ''} ${viewingSchedule.user.last_name || ''}`.trim() : viewingSchedule.name || viewingSchedule.full_name)}</h3>
+                                <button className={styles.closeBtn} onClick={closeSchedule} aria-label="Close">✖</button>
+                            </div>
+                            <div style={{ padding: 12 }}>
+                                <p className={styles.muted}>Assigned courses and sections</p>
+                                <div style={{ maxHeight: 360, overflowY: 'auto' }}>
+                                    {(viewingSchedule.courses || viewingSchedule.coursesTeaching || []).length === 0 ? <div className={styles.muted}>No assigned courses found.</div> : (
+                                        (viewingSchedule.courses || viewingSchedule.coursesTeaching || []).map((c, idx) => (
+                                            <div key={idx} style={{ padding: 8, borderBottom: '1px solid #eee' }}>
+                                                <strong>{c.name || c.code || c}</strong>
+                                                <div style={{ fontSize: 13, color: '#666' }}>{c.section || c.section_code || ''} — {c.schedule || c.time || ''}</div>
+                                            </div>
+                                        ))
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {editingFaculty && (
+                    <div className={styles.addOverlay} role="dialog" aria-modal="true">
+                        <div className={styles.addCard} style={{ maxWidth: 900 }}>
+                            <div className={styles.addHeader}>
+                                <h3>Edit Faculty — {(editingFaculty.user ? `${editingFaculty.user.first_name || ''} ${editingFaculty.user.last_name || ''}`.trim() : editingFaculty.name || editingFaculty.full_name)}</h3>
+                                <button className={styles.closeBtn} onClick={closeEdit} aria-label="Close">✖</button>
+                            </div>
+                            <div style={{ padding: 12 }}>
+                                <div style={{ display: 'flex', gap: 12 }}>
+                                    <div style={{ flex: 1 }}>
+                                        <label className={styles.formRow}>First name<input className={styles.input} value={editingFaculty.user?.first_name || editingFaculty.first_name || ''} onChange={e => setEditingFaculty(f => ({ ...f, user: { ...(f.user || {}), first_name: e.target.value } }))} /></label>
+                                        <label className={styles.formRow}>Last name<input className={styles.input} value={editingFaculty.user?.last_name || editingFaculty.last_name || ''} onChange={e => setEditingFaculty(f => ({ ...f, user: { ...(f.user || {}), last_name: e.target.value } }))} /></label>
+                                        <label className={styles.formRow}>Email<input className={styles.input} value={editingFaculty.user?.email || editingFaculty.email || ''} onChange={e => setEditingFaculty(f => ({ ...f, user: { ...(f.user || {}), email: e.target.value } }))} /></label>
+                                        <label className={styles.formRow}>Phone<input className={styles.input} value={editingFaculty.user?.phone || editingFaculty.phone || ''} onChange={e => setEditingFaculty(f => ({ ...f, user: { ...(f.user || {}), phone: e.target.value } }))} /></label>
+                                        <label className={styles.formRow}>Title<input className={styles.input} value={editingFaculty.title || ''} onChange={e => setEditingFaculty(f => ({ ...f, title: e.target.value }))} /></label>
+                                        <label className={styles.formRow}>Department<input className={styles.input} value={editingFaculty.department || ''} onChange={e => setEditingFaculty(f => ({ ...f, department: e.target.value }))} /></label>
+                                    </div>
+                                    <div style={{ width: 340 }}>
+                                        <h4>Assign Sections</h4>
+                                        {loadingSections ? <div>Loading sections…</div> : (
+                                            <div style={{ maxHeight: 320, overflowY: 'auto' }}>
+                                                {(sections || []).map(s => (
+                                                    <label key={s.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: 6 }}>
+                                                        <input type="checkbox" checked={selectedSectionIds.includes(s.id)} onChange={() => toggleSection(s.id)} />
+                                                        <div style={{ fontSize: 13 }}><strong>{s.course_name || s.name || s.course}</strong><div style={{ color: '#666' }}>{s.section_code || s.code || ''} — {s.schedule || s.time || ''}</div></div>
+                                                    </label>
+                                                ))}
+                                            </div>
+                                        )}
+                                        <div style={{ marginTop: 12, display: 'flex', gap: 8 }}>
+                                            <button className={styles.primaryBtn} onClick={saveFacultyAssignments} disabled={savingFaculty}>{savingFaculty ? 'Saving…' : 'Save Assignments'}</button>
+                                            <button className={styles.secondaryBtn} onClick={closeEdit}>Cancel</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                )}
             </div>
         </div>
     )
@@ -508,7 +982,88 @@ function Communications() {
     )
 }
 
-function AnalyticsReports() {
+function AnalyticsReports({ students = [], courses = [], faculty = [], programs = [] }) {
+
+    const downloadCSV = (filename, headers, rows) => {
+        const esc = (v) => String(v ?? '').replace(/"/g, '""')
+        const csv = [headers.join(',')].concat(rows.map(r => headers.map(h => `"${esc(r[h] ?? '')}"`).join(','))).join('\n')
+        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
+        const url = URL.createObjectURL(blob)
+        const a = document.createElement('a')
+        a.href = url
+        a.download = filename
+        document.body.appendChild(a)
+        a.click()
+        a.remove()
+        URL.revokeObjectURL(url)
+    }
+
+    const handleExportStudentDirectory = () => {
+        const headers = ['id', 'email', 'first_name', 'last_name', 'student_number', 'program', 'year_level', 'gpa', 'status']
+        const rows = (students || []).map(s => ({
+            id: s.id || '',
+            email: s.user?.email || '',
+            first_name: s.user?.first_name || '',
+            last_name: s.user?.last_name || '',
+            student_number: s.student_number || s.student_id || '',
+            program: s.program?.name || s.program || '',
+            year_level: s.year_level || '',
+            gpa: s.gpa ?? '',
+            status: s.status || (s.is_active === false ? 'Inactive' : 'Active')
+        }))
+        downloadCSV('student-directory.csv', headers, rows)
+    }
+
+    const handleCourseEnrollmentReport = () => {
+        const headers = ['code', 'name', 'credits', 'enrollment']
+        const rows = (courses || []).map(c => ({ code: c.code || '', name: c.name || '', credits: c.credits || c.credit_hours || '', enrollment: c.enrollment ?? c.enrollment_count ?? '' }))
+        downloadCSV('course-enrollment.csv', headers, rows)
+    }
+
+    const handleGPAAnalysisReport = () => {
+        const headers = ['id', 'name', 'gpa']
+        const rows = (students || []).map(s => ({ id: s.id || '', name: `${s.user?.first_name || ''} ${s.user?.last_name || ''}`.trim() || s.full_name || '', gpa: s.gpa ?? '' }))
+        downloadCSV('gpa-analysis.csv', headers, rows)
+    }
+
+    const handleGraduationTracking = () => {
+        const headers = ['id', 'name', 'expected_graduation_date', 'status']
+        const rows = (students || []).filter(s => s.is_graduated || s.status === 'graduated' || s.expected_graduation_date).map(s => ({ id: s.id || '', name: `${s.user?.first_name || ''} ${s.user?.last_name || ''}`.trim() || s.full_name || '', expected_graduation_date: s.expected_graduation_date || '', status: s.status || '' }))
+        downloadCSV('graduation-tracking.csv', headers, rows)
+    }
+
+    const handleFacultyLoadReport = () => {
+        const headers = ['id', 'name', 'department', 'courses']
+        const rows = (faculty || []).map(f => ({ id: f.id || '', name: f.user ? `${f.user.first_name || ''} ${f.user.last_name || ''}`.trim() : f.name || '', department: f.department || f.dept || '', courses: (f.courses || f.coursesTeaching || []).map(c => c.name || c).join('; ') }))
+        downloadCSV('faculty-load.csv', headers, rows)
+    }
+
+    const handleExportAcademicCalendar = async () => {
+        try {
+            const { data, error } = await apiCalendar.getEvents()
+            if (error) throw error
+            const headers = ['id', 'title', 'start_date', 'end_date', 'event_type', 'location']
+            const rows = (data || []).map(e => ({ id: e.id || '', title: e.title || e.name || '', start_date: e.start_date || '', end_date: e.end_date || '', event_type: e.event_type || '', location: e.location || '' }))
+            downloadCSV('academic-calendar.csv', headers, rows)
+        } catch (err) {
+            alert('Failed to export calendar: ' + (err.message || err))
+        }
+    }
+
+    const handleCommunicationLogs = async () => {
+        try {
+            const { data, error } = await apiAnnouncements.getAnnouncements()
+            if (error) throw error
+            const headers = ['id', 'title', 'content', 'published_at', 'target_audience']
+            const rows = (data || []).map(a => ({ id: a.id || '', title: a.title || '', content: a.content || '', published_at: a.published_at || '', target_audience: a.target_audience || '' }))
+            downloadCSV('communication-logs.csv', headers, rows)
+        } catch (err) {
+            alert('Failed to export communications: ' + (err.message || err))
+        }
+    }
+
+    const handleNotImplemented = (name) => () => alert(`${name} not implemented in demo`)
+
     return (
         <div className={styles.contentSection}>
             <div className={styles.analyticsGrid}>
@@ -596,11 +1151,11 @@ function AnalyticsReports() {
                     <h4>📄 Academic Reports</h4>
                     <p className={styles.muted}>Generate comprehensive academic reports</p>
                     <div className={styles.reportList}>
-                        <button className={styles.reportItem}>📥 Complete Student Directory</button>
-                        <button className={styles.reportItem}>📊 Course Enrollment Report</button>
-                        <button className={styles.reportItem}>📈 GPA Analysis Report</button>
-                        <button className={styles.reportItem}>🎓 Graduation Tracking</button>
-                        <button className={styles.reportItem}>👨‍👩‍👧‍👦 Faculty Load Report</button>
+                        <button className={styles.reportItem} onClick={handleExportStudentDirectory}>📥 Complete Student Directory</button>
+                        <button className={styles.reportItem} onClick={handleCourseEnrollmentReport}>📊 Course Enrollment Report</button>
+                        <button className={styles.reportItem} onClick={handleGPAAnalysisReport}>📈 GPA Analysis Report</button>
+                        <button className={styles.reportItem} onClick={handleGraduationTracking}>🎓 Graduation Tracking</button>
+                        <button className={styles.reportItem} onClick={handleFacultyLoadReport}>👨‍👩‍👧‍👦 Faculty Load Report</button>
                     </div>
                 </div>
 
@@ -608,16 +1163,16 @@ function AnalyticsReports() {
                     <h4>⚙️ System Reports</h4>
                     <p className={styles.muted}>Administrative and system analytics</p>
                     <div className={styles.reportList}>
-                        <button className={styles.reportItem}>📅 Academic Calendar Export</button>
-                        <button className={styles.reportItem}>💬 Communication Logs</button>
-                        <button className={styles.reportItem}>📊 System Activity Report</button>
-                        <button className={styles.reportItem}>💾 Data Backup Status</button>
-                        <button className={styles.reportItem}>📊 Usage Statistics</button>
+                        <button className={styles.reportItem} onClick={handleExportAcademicCalendar}>📅 Academic Calendar Export</button>
+                        <button className={styles.reportItem} onClick={handleCommunicationLogs}>💬 Communication Logs</button>
+                        <button className={styles.reportItem} onClick={handleNotImplemented('System Activity Report')}>📊 System Activity Report</button>
+                        <button className={styles.reportItem} onClick={handleNotImplemented('Data Backup Status')}>💾 Data Backup Status</button>
+                        <button className={styles.reportItem} onClick={handleNotImplemented('Usage Statistics')}>📊 Usage Statistics</button>
                     </div>
                 </div>
             </div>
 
-                <div className={styles.quickActions}>
+            <div className={styles.quickActions}>
                 <h4>⚡ Quick Admin Actions</h4>
                 <p className={styles.muted}>Essential administrative tasks and quick add forms</p>
                 <div className={styles.actionGrid}>
@@ -670,6 +1225,54 @@ function AnalyticsReports() {
 }
 
 function Settings() {
+    const [profile, setProfile] = useState({ firstName: 'Admin', lastName: 'User', email: 'admin@university.edu' })
+    const [institution, setInstitution] = useState({ name: 'University of Excellence', address: '123 University Ave, Education City', address2: '456 Academic Blvd, Knowledge City', emailDomain: '@university.edu' })
+    const [notifications, setNotifications] = useState(() => ({
+        emailNotifications: JSON.parse(localStorage.getItem('settings:emailNotifications') || 'true'),
+        registrationAlerts: JSON.parse(localStorage.getItem('settings:registrationAlerts') || 'true'),
+        maintenanceAlerts: JSON.parse(localStorage.getItem('settings:maintenanceAlerts') || 'true'),
+        securityAlerts: JSON.parse(localStorage.getItem('settings:securityAlerts') || 'true')
+    }))
+    const [academicSettings, setAcademicSettings] = useState(() => ({
+        currentAcademicYear: localStorage.getItem('settings:currentAcademicYear') || 'Fall 2025',
+        currentSemester: localStorage.getItem('settings:currentSemester') || 'Fall 2025',
+        registrationStartDate: localStorage.getItem('settings:registrationStartDate') || '',
+        semesterStartDate: localStorage.getItem('settings:semesterStartDate') || '2025-08-15'
+    }))
+
+    const handleChangePassword = async () => {
+        const email = profile.email || prompt('Enter admin email to send password reset:')
+        if (!email) return
+        try {
+            const { data, error } = await apiAuth.sendPasswordReset(email)
+            if (error) throw error
+            alert('Password reset email sent to ' + email)
+        } catch (err) {
+            alert('Failed to send password reset: ' + (err.message || err))
+        }
+    }
+
+    const handleUpdateInstitution = () => {
+        // Persist to localStorage as demo persistence
+        localStorage.setItem('settings:institution', JSON.stringify(institution))
+        alert('Institution settings saved')
+    }
+
+    const toggleNotification = (key) => {
+        setNotifications(n => {
+            const next = { ...n, [key]: !n[key] }
+            localStorage.setItem(`settings:${key}`, JSON.stringify(next[key]))
+            return next
+        })
+    }
+
+    const handleUpdateAcademicSettings = () => {
+        Object.keys(academicSettings).forEach(k => localStorage.setItem(`settings:${k}`, academicSettings[k] || ''))
+        alert('Academic settings updated')
+    }
+
+    const handleDangerAction = (name) => () => alert(name + ' is not available in this demo')
+
     return (
         <div className={styles.contentSection}>
             <h3>⚙️ Settings</h3>
@@ -681,21 +1284,21 @@ function Settings() {
                     <p className={styles.settingsMuted}>Manage your administrator account and preferences</p>
                     <div className={styles.formGroup}>
                         <label>First Name</label>
-                        <input type="text" defaultValue="Admin" className={styles.input} />
+                        <input type="text" value={profile.firstName} onChange={e => setProfile(p => ({ ...p, firstName: e.target.value }))} className={styles.input} />
                     </div>
                     <div className={styles.formGroup}>
                         <label>Last Name</label>
-                        <input type="text" defaultValue="User" className={styles.input} />
+                        <input type="text" value={profile.lastName} onChange={e => setProfile(p => ({ ...p, lastName: e.target.value }))} className={styles.input} />
                     </div>
                     <div className={styles.formGroup}>
                         <label>Email</label>
-                        <input type="email" defaultValue="admin@university.edu" className={styles.input} />
+                        <input type="email" value={profile.email} onChange={e => setProfile(p => ({ ...p, email: e.target.value }))} className={styles.input} />
                     </div>
                     <div className={styles.formGroup}>
                         <label>Role</label>
                         <input type="text" defaultValue="System Administrator" className={styles.input} disabled />
                     </div>
-                    <button className={styles.primaryBtn}>💾 Change Password</button>
+                    <button className={styles.primaryBtn} onClick={handleChangePassword}>💾 Change Password</button>
                 </div>
 
                 <div className={styles.settingsCard}>
@@ -703,21 +1306,21 @@ function Settings() {
                     <p className={styles.settingsMuted}>Update institution details and settings</p>
                     <div className={styles.formGroup}>
                         <label>Institution Name</label>
-                        <input type="text" defaultValue="University of Excellence" className={styles.input} />
+                        <input type="text" value={institution.name} onChange={e => setInstitution(i => ({ ...i, name: e.target.value }))} className={styles.input} />
                     </div>
                     <div className={styles.formGroup}>
                         <label>Institution Address</label>
-                        <input type="text" defaultValue="123 University Ave, Education City" className={styles.input} />
+                        <input type="text" value={institution.address} onChange={e => setInstitution(i => ({ ...i, address: e.target.value }))} className={styles.input} />
                     </div>
                     <div className={styles.formGroup}>
                         <label>Address</label>
-                        <input type="text" defaultValue="456 Academic Blvd, Knowledge City" className={styles.input} />
+                        <input type="text" value={institution.address2} onChange={e => setInstitution(i => ({ ...i, address2: e.target.value }))} className={styles.input} />
                     </div>
                     <div className={styles.formGroup}>
                         <label>Email Domain</label>
-                        <input type="text" defaultValue="@university.edu" className={styles.input} />
+                        <input type="text" value={institution.emailDomain} onChange={e => setInstitution(i => ({ ...i, emailDomain: e.target.value }))} className={styles.input} />
                     </div>
-                    <button className={styles.primaryBtn}>💾 Update Institution Info</button>
+                    <button className={styles.primaryBtn} onClick={handleUpdateInstitution}>💾 Update Institution Info</button>
                 </div>
             </div>
 
@@ -729,28 +1332,28 @@ function Settings() {
                         <div className={styles.toggleItem}>
                             <span>Email Notifications</span>
                             <label className={styles.toggle}>
-                                <input type="checkbox" defaultChecked />
+                                <input type="checkbox" checked={!!notifications.emailNotifications} onChange={() => toggleNotification('emailNotifications')} />
                                 <span className={styles.slider}></span>
                             </label>
                         </div>
                         <div className={styles.toggleItem}>
                             <span>Student Registration Alerts</span>
                             <label className={styles.toggle}>
-                                <input type="checkbox" defaultChecked />
+                                <input type="checkbox" checked={!!notifications.registrationAlerts} onChange={() => toggleNotification('registrationAlerts')} />
                                 <span className={styles.slider}></span>
                             </label>
                         </div>
                         <div className={styles.toggleItem}>
                             <span>System Maintenance Alerts</span>
                             <label className={styles.toggle}>
-                                <input type="checkbox" defaultChecked />
+                                <input type="checkbox" checked={!!notifications.maintenanceAlerts} onChange={() => toggleNotification('maintenanceAlerts')} />
                                 <span className={styles.slider}></span>
                             </label>
                         </div>
                         <div className={styles.toggleItem}>
                             <span>Security Alerts</span>
                             <label className={styles.toggle}>
-                                <input type="checkbox" defaultChecked />
+                                <input type="checkbox" checked={!!notifications.securityAlerts} onChange={() => toggleNotification('securityAlerts')} />
                                 <span className={styles.slider}></span>
                             </label>
                         </div>
@@ -762,27 +1365,27 @@ function Settings() {
                     <p className={styles.settingsMuted}>Manage academic terms and schedule settings</p>
                     <div className={styles.formGroup}>
                         <label>Current Academic Year</label>
-                        <select className={styles.select}>
+                        <select className={styles.select} value={academicSettings.currentAcademicYear} onChange={e => setAcademicSettings(a => ({ ...a, currentAcademicYear: e.target.value }))}>
                             <option>Fall 2025</option>
                             <option>Spring 2026</option>
                         </select>
                     </div>
                     <div className={styles.formGroup}>
                         <label>Current Semester</label>
-                        <select className={styles.select}>
+                        <select className={styles.select} value={academicSettings.currentSemester} onChange={e => setAcademicSettings(a => ({ ...a, currentSemester: e.target.value }))}>
                             <option>Fall 2025</option>
                             <option>Spring 2026</option>
                         </select>
                     </div>
                     <div className={styles.formGroup}>
                         <label>Registration Start Date</label>
-                        <input type="date" className={styles.input} />
+                        <input type="date" className={styles.input} value={academicSettings.registrationStartDate} onChange={e => setAcademicSettings(a => ({ ...a, registrationStartDate: e.target.value }))} />
                     </div>
                     <div className={styles.formGroup}>
                         <label>Semester Start Date</label>
-                        <input type="date" defaultValue="2025-08-15" className={styles.input} />
+                        <input type="date" defaultValue="2025-08-15" className={styles.input} value={academicSettings.semesterStartDate} onChange={e => setAcademicSettings(a => ({ ...a, semesterStartDate: e.target.value }))} />
                     </div>
-                    <button className={styles.primaryBtn}>💾 Update Academic Settings</button>
+                    <button className={styles.primaryBtn} onClick={handleUpdateAcademicSettings}>💾 Update Academic Settings</button>
                 </div>
             </div>
 
@@ -790,10 +1393,10 @@ function Settings() {
                 <h4>⚠️ Advanced Configuration</h4>
                 <p className={styles.settingsMuted}>Advanced system configuration for experienced administrators</p>
                 <div className={styles.dangerActions}>
-                    <button className={styles.dangerBtn}>🔧 System Configuration</button>
-                    <button className={styles.dangerBtn}>🎓 Academic Settings</button>
-                    <button className={styles.dangerBtn}>🔐 Security Configuration</button>
-                    <button className={styles.dangerBtn}>🛡️ System Audit Settings</button>
+                    <button className={styles.dangerBtn} onClick={handleDangerAction('System Configuration')}>🔧 System Configuration</button>
+                    <button className={styles.dangerBtn} onClick={handleDangerAction('Academic Settings')}>🎓 Academic Settings</button>
+                    <button className={styles.dangerBtn} onClick={handleDangerAction('Security Configuration')}>🔐 Security Configuration</button>
+                    <button className={styles.dangerBtn} onClick={handleDangerAction('System Audit Settings')}>🛡️ System Audit Settings</button>
                 </div>
             </div>
         </div>
@@ -884,7 +1487,7 @@ export default function AdminDashboard({ onLogout }) {
                     {tab === 'Student Management' && <StudentManagement students={students} />}
                     {tab === 'Faculty Management' && <FacultyManagement faculty={faculty} />}
                     {tab === 'Communications' && <Communications />}
-                    {tab === 'Analytics & Reports' && <AnalyticsReports />}
+                    {tab === 'Analytics & Reports' && <AnalyticsReports students={students} courses={courses} faculty={faculty} programs={programs} />}
                     {tab === 'Settings' && <Settings />}
                 </section>
                 {addForm.open && (
