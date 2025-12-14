@@ -125,7 +125,7 @@ function SettingsTab({ faculty }) {
     const [profile, setProfile] = useState(() => ({
         first_name: faculty?.user?.first_name || faculty?.user?.first_name || '',
         last_name: faculty?.user?.last_name || faculty?.user?.last_name || '',
-        email: faculty?.user?.email || '' ,
+        email: faculty?.user?.email || '',
         title: faculty?.title || faculty?.position || ''
     }))
 
@@ -308,6 +308,64 @@ export default function FacultyDashboardWithSupabase({ onLogout }) {
         }
     }
 
+    const handleRemoveStudent = async (enrollment) => {
+        console.log('handleRemoveStudent clicked', enrollment && enrollment.id)
+        if (!enrollment || !enrollment.id) return
+        if (!confirm('Remove this student from the section?')) return
+        try {
+            const { error } = await supabase.from('enrollments').delete().eq('id', enrollment.id)
+            if (error) throw error
+            // refresh roster
+            await openRoster(selectedSection)
+            alert('Student removed')
+        } catch (e) {
+            console.error('Failed removing student', e)
+            alert('Failed to remove student: ' + (e.message || e))
+        }
+    }
+
+    const handleSetGrade = async (enrollment) => {
+        console.log('handleSetGrade clicked', enrollment && enrollment.id)
+        if (!enrollment || !enrollment.id) return
+        const grade = window.prompt('Enter grade (e.g., A, B+, 85):', enrollment.grade || '')
+        if (grade === null) return
+        try {
+            const { error } = await supabase.from('enrollments').update({ grade }).eq('id', enrollment.id)
+            if (error) throw error
+            await openRoster(selectedSection)
+            alert('Grade updated')
+        } catch (e) {
+            console.error('Failed updating grade', e)
+            alert('Failed to update grade: ' + (e.message || e))
+        }
+    }
+
+    const exportRosterCSV = () => {
+        const rows = (roster || []).map(r => ({
+            enrollment_id: r.id || '',
+            student_id: r.student?.id || '',
+            student_number: r.student?.student_number || '',
+            first_name: r.student?.user?.first_name || '',
+            last_name: r.student?.user?.last_name || '',
+            email: r.student?.user?.email || '',
+            status: r.status || '',
+            grade: r.grade || ''
+        }))
+        if (!rows.length) return alert('No roster to export')
+        const headers = Object.keys(rows[0])
+        const esc = v => String(v ?? '').replace(/"/g, '""')
+        const csv = [headers.join(',')].concat(rows.map(r => headers.map(h => `"${esc(r[h])}"`).join(','))).join('\n')
+        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
+        const url = URL.createObjectURL(blob)
+        const a = document.createElement('a')
+        a.href = url
+        a.download = `${(selectedSection?.course?.code || 'section')}_roster.csv`
+        document.body.appendChild(a)
+        a.click()
+        a.remove()
+        URL.revokeObjectURL(url)
+    }
+
     const busy = loading || annLoading || eventsLoading
 
     if (busy) {
@@ -362,25 +420,7 @@ export default function FacultyDashboardWithSupabase({ onLogout }) {
                                 </div>
                                 <div style={{ display: 'flex', gap: 8 }}>
                                     <button className="secondary" onClick={sendAnnouncementToSection}>📣 Announce</button>
-                                    <button className="secondary" onClick={() => {
-                                        const rows = (roster || []).map(r => ({
-                                            student_id: r.student?.id || '',
-                                            student_number: r.student?.student_number || '',
-                                            first_name: r.student?.user?.first_name || '',
-                                            last_name: r.student?.user?.last_name || '',
-                                            email: r.student?.user?.email || ''
-                                        }))
-                                        const csv = [Object.keys(rows[0] || {}).join(','), ...rows.map(r => Object.values(r).map(v => `"${String(v).replace(/"/g, '""')}"`).join(','))].join('\n')
-                                        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
-                                        const url = URL.createObjectURL(blob)
-                                        const a = document.createElement('a')
-                                        a.href = url
-                                        a.download = `${(selectedSection?.course?.code || 'section')}_roster.csv`
-                                        document.body.appendChild(a)
-                                        a.click()
-                                        a.remove()
-                                        URL.revokeObjectURL(url)
-                                    }}>⬇️ Download CSV</button>
+                                    <button className="secondary" onClick={exportRosterCSV}>⬇️ Download CSV</button>
                                 </div>
                             </div>
                             <div style={{ marginTop: 12 }}>
@@ -396,6 +436,8 @@ export default function FacultyDashboardWithSupabase({ onLogout }) {
                                                 const mail = r.student?.user?.email
                                                 if (mail) window.location.href = `mailto:${mail}`
                                             }}>✉️ Email</button>
+                                            <button className="secondary" onClick={() => handleSetGrade(r)}>Set Grade</button>
+                                            <button className="dangerBtn" onClick={() => handleRemoveStudent(r)}>Remove</button>
                                         </div>
                                     </div>
                                 ))}
