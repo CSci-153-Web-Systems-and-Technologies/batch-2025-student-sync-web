@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react'
+import { NavLink, useLocation } from 'react-router-dom'
 import { useAuth } from './components/useAuth'
 import { useAnnouncements } from './components/useAnnouncements'
 import { useCalendarEvents } from './components/useCalendarEvents'
@@ -207,20 +208,29 @@ function SettingsTab({ faculty }) {
     )
 }
 
-export default function FacultyDashboardWithSupabase({ onLogout }) {
+export default function FacultyDashboardWithSupabase({ onLogout, initialTab }) {
     const { user: authUser } = useAuth()
     const [faculty, setFaculty] = useState(null)
     const [sections, setSections] = useState([])
     const [loading, setLoading] = useState(true)
     const { announcements, loading: annLoading } = useAnnouncements('faculty')
     const { events, loading: eventsLoading } = useCalendarEvents()
-    const [tab, setTab] = useState('Overview')
+    const [tab, setTab] = useState(initialTab || 'Overview')
+    const location = useLocation()
+
+    useEffect(() => {
+        const p = location.pathname || ''
+        if (p.startsWith('/faculty/courses')) setTab('Courses')
+        else if (p.startsWith('/faculty/schedule')) setTab('Schedule')
+        else if (p.startsWith('/faculty/communications')) setTab('Communications')
+        else if (p.startsWith('/faculty/settings')) setTab('Settings')
+        else setTab('Overview')
+    }, [location.pathname])
     const [rosterOpen, setRosterOpen] = useState(false)
     const [roster, setRoster] = useState([])
     const [selectedSection, setSelectedSection] = useState(null)
 
     useEffect(() => {
-        if (!authUser) return
         const fetch = async () => {
             setLoading(true)
 
@@ -397,7 +407,13 @@ export default function FacultyDashboardWithSupabase({ onLogout }) {
             <main className={styles.main}>
                 <h1 className={styles.welcome}>Welcome, {faculty.user.first_name}</h1>
                 <p className={styles.subtitle}>Your teaching assignments and schedule</p>
-                <Tabs value={tab} onChange={setTab} />
+                <nav className={styles.tabs} aria-label="Faculty navigation">
+                    <NavLink to="/faculty/overview" className={({ isActive }) => isActive ? styles.tabActive : styles.tab}>Overview</NavLink>
+                    <NavLink to="/faculty/courses" className={({ isActive }) => isActive ? styles.tabActive : styles.tab}>Courses</NavLink>
+                    <NavLink to="/faculty/schedule" className={({ isActive }) => isActive ? styles.tabActive : styles.tab}>Schedule</NavLink>
+                    <NavLink to="/faculty/communications" className={({ isActive }) => isActive ? styles.tabActive : styles.tab}>Communications</NavLink>
+                    <NavLink to="/faculty/settings" className={({ isActive }) => isActive ? styles.tabActive : styles.tab}>Settings</NavLink>
+                </nav>
                 <section className={styles.section}>
                     {tab === 'Overview' && <Overview faculty={faculty} sections={sections} events={events} />}
                     {tab === 'Courses' && <CoursesTab sections={sections} onOpenRoster={openRoster} />}
@@ -454,3 +470,5 @@ export default function FacultyDashboardWithSupabase({ onLogout }) {
         </div>
     )
 }
+
+export { Overview, CoursesTab, ScheduleTab, CommunicationsTab, SettingsTab }
