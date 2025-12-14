@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react'
+import { NavLink, useLocation } from 'react-router-dom'
 import styles from './AdminDashboard.module.css'
 import { useAuth } from './components/useAuth'
 import { useDegreePrograms } from './components/useDegreePrograms'
@@ -1407,8 +1408,20 @@ function Settings() {
     )
 }
 
-export default function AdminDashboard({ onLogout }) {
-    const [tab, setTab] = useState('Degree Programs')
+export default function AdminDashboard({ onLogout, initialTab }) {
+    const [tab, setTab] = useState(initialTab || 'Degree Programs')
+    const location = useLocation()
+
+    useEffect(() => {
+        const p = location.pathname || ''
+        if (p.startsWith('/admin/courses')) setTab('Course Management')
+        else if (p.startsWith('/admin/students')) setTab('Student Management')
+        else if (p.startsWith('/admin/faculty')) setTab('Faculty Management')
+        else if (p.startsWith('/admin/communications')) setTab('Communications')
+        else if (p.startsWith('/admin/analytics')) setTab('Analytics & Reports')
+        else if (p.startsWith('/admin/settings')) setTab('Settings')
+        else setTab('Degree Programs')
+    }, [location.pathname])
     const { user } = useAuth()
     const { programs, loading: programsLoading } = useDegreePrograms()
     const { faculty, loading: facultyLoading } = useFaculty()
@@ -1483,7 +1496,15 @@ export default function AdminDashboard({ onLogout }) {
                 <p className={styles.subtitle}>Welcome back, Admin! Manage students and system settings</p>
 
                 <StatCards totals={totals} />
-                <Tabs value={tab} onChange={setTab} />
+                <nav className={styles.tabs} aria-label="Admin navigation">
+                    <NavLink to="/admin/programs" className={({ isActive }) => isActive ? styles.tabActive : styles.tab}>Degree Programs</NavLink>
+                    <NavLink to="/admin/courses" className={({ isActive }) => isActive ? styles.tabActive : styles.tab}>Course Management</NavLink>
+                    <NavLink to="/admin/students" className={({ isActive }) => isActive ? styles.tabActive : styles.tab}>Student Management</NavLink>
+                    <NavLink to="/admin/faculty" className={({ isActive }) => isActive ? styles.tabActive : styles.tab}>Faculty Management</NavLink>
+                    <NavLink to="/admin/communications" className={({ isActive }) => isActive ? styles.tabActive : styles.tab}>Communications</NavLink>
+                    <NavLink to="/admin/analytics" className={({ isActive }) => isActive ? styles.tabActive : styles.tab}>Analytics & Reports</NavLink>
+                    <NavLink to="/admin/settings" className={({ isActive }) => isActive ? styles.tabActive : styles.tab}>Settings</NavLink>
+                </nav>
 
                 <section className={styles.section}>
                     {tab === 'Degree Programs' && <DegreePrograms programs={programs} />}
@@ -1519,6 +1540,8 @@ export default function AdminDashboard({ onLogout }) {
         </div>
     )
 }
+
+export { DegreePrograms, CourseManagement, StudentManagement, FacultyManagement, Communications, AnalyticsReports, Settings }
 
 function AddForm({ type, defaultData = {}, onCancel, onSubmit, loading, programs = [], courses = [], facultyList = [] }) {
     const [form, setForm] = useState(defaultData || {})
