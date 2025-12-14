@@ -1,4 +1,5 @@
 import React, { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import './LandingPage.css'
 
 function Field({ label, placeholder, type = 'text', value, onChange }) {
@@ -13,6 +14,7 @@ function Field({ label, placeholder, type = 'text', value, onChange }) {
 export default function LandingPage({ onAuth }) {
     const [tab, setTab] = useState('login')
     const [loginRole, setLoginRole] = useState('Student')
+    const navigate = useNavigate()
 
     const handleSubmit = (e) => {
         e.preventDefault()
@@ -28,8 +30,8 @@ export default function LandingPage({ onAuth }) {
                     <div className="subtitle">Student ID & Profile Management</div>
                 </div>
                 <div className="tabs">
-                    <button className={tab === 'login' ? 'active' : ''} onClick={() => setTab('login')}>Login</button>
-                    <button className={tab === 'signup' ? 'active' : ''} onClick={() => setTab('signup')}>Sign up</button>
+                    <button className={tab === 'login' ? 'active' : ''} onClick={() => navigate('/signin')}>Login</button>
+                    <button className={tab === 'signup' ? 'active' : ''} onClick={() => navigate('/signup')}>Sign up</button>
                 </div>
 
                 {tab === 'login' ? (
@@ -44,9 +46,9 @@ export default function LandingPage({ onAuth }) {
                             </select>
                         </div>
                         <button type="submit" className="primary">Sign in</button>
-                        <div className="muted">Forgot your password?</div>
+                        <div className="muted"><button type="button" className="link" onClick={() => navigate('/forgot')}>Forgot your password?</button></div>
                         <div className="divider"><span>or</span></div>
-                        <button type="button" className="alt">Continue with Google</button>
+                        <button type="button" className="alt" onClick={() => navigate('/signin')}>Continue with Google</button>
                         <label className="agree"><input type="checkbox" /> By continuing, you agree to our Terms of Service and Privacy Policy.</label>
                     </form>
                 ) : (
@@ -64,7 +66,7 @@ export default function LandingPage({ onAuth }) {
                         </div>
                         <button type="submit" className="primary">Sign up</button>
                         <div className="divider"><span>or</span></div>
-                        <button type="button" className="alt">Continue with Google</button>
+                        <button type="button" className="alt" onClick={() => navigate('/signin')}>Continue with Google</button>
                         <label className="agree"><input type="checkbox" /> By continuing, you agree to our Terms of Service and Privacy Policy.</label>
                     </form>
                 )}
