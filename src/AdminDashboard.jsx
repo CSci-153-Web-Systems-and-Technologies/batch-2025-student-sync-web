@@ -1,6 +1,10 @@
 import React, { useState, useEffect } from 'react'
 import styles from './AdminDashboard.module.css'
-import { useAuth, useDegreePrograms, useFaculty, useStudents, useCourses } from './hooks/useSupabase'
+import { useAuth } from './components/useAuth'
+import { useDegreePrograms } from './components/useDegreePrograms'
+import { useFaculty } from './components/useFaculty'
+import { useStudents } from './components/useStudents'
+import { useCourses } from './components/useCourses'
 import {
     degreePrograms as apiDegreePrograms,
     courses as apiCourses,

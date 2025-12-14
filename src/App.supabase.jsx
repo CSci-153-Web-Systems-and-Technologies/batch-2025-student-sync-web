@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { useAuth } from './hooks/useSupabase'
+import { useAuth } from './components/useAuth'
 import StudentDashboardWithSupabase from './StudentDashboard.supabase'
 import AdminDashboard from './AdminDashboard'
 import FacultyDashboardWithSupabase from './FacultyDashboard.supabase'

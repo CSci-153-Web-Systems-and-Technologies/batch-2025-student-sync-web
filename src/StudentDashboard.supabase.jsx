@@ -1,5 +1,8 @@
 import React, { useState, useEffect } from 'react'
-import { useAuth, useStudent, useDegreePrograms, useEnrollments } from './hooks/useSupabase'
+import { useAuth } from './components/useAuth'
+import { useStudent } from './components/useStudent'
+import { useDegreePrograms } from './components/useDegreePrograms'
+import { useEnrollments } from './components/useEnrollments'
 import { users, students } from './supabase'
 import styles from './StudentDashboard.module.css'
 

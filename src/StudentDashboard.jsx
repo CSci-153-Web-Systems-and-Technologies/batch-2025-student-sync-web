@@ -1,6 +1,9 @@
 import React, { useState } from 'react'
 import styles from './StudentDashboard.module.css'
-import { useAuth, useUserProfile, useStudent, useEnrollments } from './hooks/useSupabase'
+import { useAuth } from './components/useAuth'
+import { useUserProfile } from './components/useUserProfile'
+import { useStudent } from './components/useStudent'
+import { useEnrollments } from './components/useEnrollments'
 import { users as usersApi, students as studentsApi } from './supabase'
 import { downloadFile, logActivity } from './utils/supabaseUtils'
 
