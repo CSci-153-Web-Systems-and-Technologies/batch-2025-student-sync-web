@@ -19,12 +19,15 @@ import {
     courseSections as apiCourseSections
 } from './supabase'
 
-function Topbar({ name, onLogout, onSearch, theme, onToggleTheme }) {
+function Topbar({ name, onLogout, onSearch, theme, onToggleTheme, onToggleSidebar, sidebarVisible }) {
     return (
         <header className={styles.topbar}>
-            <div className={styles.brand}>
-                <span className={styles.shield} aria-hidden>🛡️</span>
-                <div className={styles.brandText}>Admin Portal</div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                <button className={styles.hamburger} onClick={onToggleSidebar} aria-label="Toggle sidebar" aria-pressed={!!sidebarVisible}>{sidebarVisible ? '☰' : '☰'}</button>
+                <div className={styles.brand}>
+                    <span className={styles.shield} aria-hidden>🛡️</span>
+                    <div className={styles.brandText}>Admin Portal</div>
+                </div>
             </div>
 
             <div className={styles.topbarCenter}>
@@ -1447,6 +1450,20 @@ export default function AdminDashboard({ onLogout, initialTab }) {
     })
     useEffect(() => { try { localStorage.setItem('admin:theme', theme) } catch (e) { } }, [theme])
     const handleToggleTheme = () => setTheme(t => (t === 'dark' ? 'light' : 'dark'))
+    const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
+    const [sidebarVisible, setSidebarVisible] = useState(true)
+    const handleToggleSidebar = () => setSidebarVisible(v => !v)
+
+    useEffect(() => {
+        const onKey = (e) => {
+            if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'b') {
+                e.preventDefault()
+                setSidebarVisible(v => !v)
+            }
+        }
+        window.addEventListener('keydown', onKey)
+        return () => window.removeEventListener('keydown', onKey)
+    }, [])
     const handleSearch = q => { /* lightweight: could be wired to filters */ console.log('Admin search:', q) }
 
     // Add-form state and opener exposed globally for internal callers in-file
@@ -1490,22 +1507,36 @@ export default function AdminDashboard({ onLogout, initialTab }) {
 
     return (
         <div className={`${styles.container} ${theme === 'dark' ? styles.dark : ''}`} data-theme={theme}>
-            <Topbar name={adminName} onLogout={onLogout} onSearch={handleSearch} theme={theme} onToggleTheme={handleToggleTheme} />
+            <Topbar name={adminName} onLogout={onLogout} onSearch={handleSearch} theme={theme} onToggleTheme={handleToggleTheme} onToggleSidebar={handleToggleSidebar} sidebarVisible={sidebarVisible} />
 
-            <div className={styles.contentWrap}>
-                <aside className={styles.sidebar} aria-label="Admin sidebar">
+            <div className={`${styles.contentWrap} ${!sidebarVisible ? styles.sidebarClosed : ''}`}>
+                <aside className={`${styles.sidebar} ${sidebarCollapsed ? styles.collapsed : ''} ${!sidebarVisible ? styles.hidden : ''}`} aria-label="Admin sidebar" aria-expanded={sidebarCollapsed ? 'false' : 'true'} aria-hidden={!sidebarVisible}>
                     <div className={styles.sidebarHeader}>
                         <div className={styles.brandSmall}><span className={styles.shield}>🛡️</span> Admin Portal</div>
                         <div className={styles.sidebarUser}>Hi, {adminName || 'Admin'}</div>
                     </div>
                     <nav className={styles.sidebarNav}>
-                        <NavLink to="/admin/programs" className={({ isActive }) => isActive ? styles.sideLinkActive : styles.sideLink}>Degree Programs</NavLink>
-                        <NavLink to="/admin/courses" className={({ isActive }) => isActive ? styles.sideLinkActive : styles.sideLink}>Course Management</NavLink>
-                        <NavLink to="/admin/students" className={({ isActive }) => isActive ? styles.sideLinkActive : styles.sideLink}>Student Management</NavLink>
-                        <NavLink to="/admin/faculty" className={({ isActive }) => isActive ? styles.sideLinkActive : styles.sideLink}>Faculty Management</NavLink>
-                        <NavLink to="/admin/communications" className={({ isActive }) => isActive ? styles.sideLinkActive : styles.sideLink}>Communications</NavLink>
-                        <NavLink to="/admin/analytics" className={({ isActive }) => isActive ? styles.sideLinkActive : styles.sideLink}>Analytics & Reports</NavLink>
-                        <NavLink to="/admin/settings" className={({ isActive }) => isActive ? styles.sideLinkActive : styles.sideLink}>Settings</NavLink>
+                        {(() => {
+                            const handleNavClick = () => {
+                                try {
+                                    if (window.innerWidth < 980) setSidebarVisible(false)
+                                    else setSidebarCollapsed(true)
+                                } catch (e) {
+                                    setSidebarCollapsed(true)
+                                }
+                            }
+                            return (
+                                <>
+                                    <NavLink onClick={handleNavClick} to="/admin/programs" title="Degree Programs" aria-label="Degree Programs" className={({ isActive }) => isActive ? styles.sideLinkActive : styles.sideLink}><span className={styles.sideIcon} aria-hidden>🎓</span><span className={styles.sideText}>Degree Programs</span></NavLink>
+                                    <NavLink onClick={handleNavClick} to="/admin/courses" title="Course Management" aria-label="Course Management" className={({ isActive }) => isActive ? styles.sideLinkActive : styles.sideLink}><span className={styles.sideIcon} aria-hidden>📚</span><span className={styles.sideText}>Course Management</span></NavLink>
+                                    <NavLink onClick={handleNavClick} to="/admin/students" title="Student Management" aria-label="Student Management" className={({ isActive }) => isActive ? styles.sideLinkActive : styles.sideLink}><span className={styles.sideIcon} aria-hidden>👩‍🎓</span><span className={styles.sideText}>Student Management</span></NavLink>
+                                    <NavLink onClick={handleNavClick} to="/admin/faculty" title="Faculty Management" aria-label="Faculty Management" className={({ isActive }) => isActive ? styles.sideLinkActive : styles.sideLink}><span className={styles.sideIcon} aria-hidden>👨‍🏫</span><span className={styles.sideText}>Faculty Management</span></NavLink>
+                                    <NavLink onClick={handleNavClick} to="/admin/communications" title="Communications" aria-label="Communications" className={({ isActive }) => isActive ? styles.sideLinkActive : styles.sideLink}><span className={styles.sideIcon} aria-hidden>💬</span><span className={styles.sideText}>Communications</span></NavLink>
+                                    <NavLink onClick={handleNavClick} to="/admin/analytics" title="Analytics & Reports" aria-label="Analytics & Reports" className={({ isActive }) => isActive ? styles.sideLinkActive : styles.sideLink}><span className={styles.sideIcon} aria-hidden>📈</span><span className={styles.sideText}>Analytics & Reports</span></NavLink>
+                                    <NavLink onClick={handleNavClick} to="/admin/settings" title="Settings" aria-label="Settings" className={({ isActive }) => isActive ? styles.sideLinkActive : styles.sideLink}><span className={styles.sideIcon} aria-hidden>⚙️</span><span className={styles.sideText}>Settings</span></NavLink>
+                                </>
+                            )
+                        })()}
                     </nav>
                     <div className={styles.sidebarFooter}>
                         <button className={styles.primaryBtn} onClick={() => window.__openAddForm && window.__openAddForm('program')}>➕ Add</button>
@@ -1513,21 +1544,23 @@ export default function AdminDashboard({ onLogout, initialTab }) {
                     </div>
                 </aside>
 
-                <main className={styles.main}>
+                <main className={styles.main} onClick={() => { if (sidebarVisible && window.innerWidth < 980) setSidebarVisible(false) }}>
                     <h1 className={styles.welcome}>Admin Dashboard</h1>
                     <p className={styles.subtitle}>Welcome back, Admin! Manage students and system settings</p>
 
                     <StatCards totals={totals} />
 
-                    <section className={styles.section}>
-                        {tab === 'Degree Programs' && <DegreePrograms programs={programs} />}
-                        {tab === 'Course Management' && <CourseManagement courses={courses} />}
-                        {tab === 'Student Management' && <StudentManagement students={students} />}
-                        {tab === 'Faculty Management' && <FacultyManagement faculty={faculty} />}
-                        {tab === 'Communications' && <Communications />}
-                        {tab === 'Analytics & Reports' && <AnalyticsReports students={students} courses={courses} faculty={faculty} programs={programs} />}
-                        {tab === 'Settings' && <Settings />}
-                    </section>
+                    <div className={styles.tabArea}>
+                        <section className={styles.section}>
+                            {tab === 'Degree Programs' && <DegreePrograms programs={programs} />}
+                            {tab === 'Course Management' && <CourseManagement courses={courses} />}
+                            {tab === 'Student Management' && <StudentManagement students={students} />}
+                            {tab === 'Faculty Management' && <FacultyManagement faculty={faculty} />}
+                            {tab === 'Communications' && <Communications />}
+                            {tab === 'Analytics & Reports' && <AnalyticsReports students={students} courses={courses} faculty={faculty} programs={programs} />}
+                            {tab === 'Settings' && <Settings />}
+                        </section>
+                    </div>
                     {addForm.open && (
                         <div className={styles.addOverlay} role="dialog" aria-modal="true">
                             <div className={styles.addCard}>
