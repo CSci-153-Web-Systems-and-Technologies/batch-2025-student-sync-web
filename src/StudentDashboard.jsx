@@ -17,7 +17,7 @@ function Topbar({ name, onLogout }) {
 }
 
 function Tabs({ value, onChange }) {
-    const tabs = ['Overview', 'Profile Management', 'Academic Info']
+    const tabs = ['Overview', 'Profile Management', 'Academic Info', 'Settings']
     return (
         <div className={styles.tabs} role="tablist">
             {tabs.map(t => (
@@ -29,6 +29,165 @@ function Tabs({ value, onChange }) {
                     {t}
                 </button>
             ))}
+        </div>
+    )
+}
+
+function SettingsTab({ student, profile, enrollments = [] }) {
+    const [notifications, setNotifications] = React.useState(() => ({
+        emailNotifications: JSON.parse(localStorage.getItem('student:emailNotifications') || 'true'),
+        gradeAlerts: JSON.parse(localStorage.getItem('student:gradeAlerts') || 'true'),
+        marketing: JSON.parse(localStorage.getItem('student:marketing') || 'false')
+    }))
+
+    const [privacy, setPrivacy] = React.useState(() => ({
+        shareProfile: JSON.parse(localStorage.getItem('student:shareProfile') || 'false')
+    }))
+
+    const [officeHours, setOfficeHours] = React.useState(() => localStorage.getItem('student:officeHours') || '')
+    const [saving, setSaving] = React.useState(false)
+
+    const toggleNotification = (k) => {
+        setNotifications(n => {
+            const next = { ...n, [k]: !n[k] }
+            try { localStorage.setItem(`student:${k}`, JSON.stringify(next[k])) } catch (e) { }
+            return next
+        })
+    }
+
+    const togglePrivacy = (k) => {
+        setPrivacy(p => {
+            const next = { ...p, [k]: !p[k] }
+            try { localStorage.setItem(`student:${k}`, JSON.stringify(next[k])) } catch (e) { }
+            return next
+        })
+    }
+
+    const handleChangePassword = async () => {
+        const email = profile?.email || window.prompt('Enter email to send reset to:')
+        if (!email) return alert('No email provided')
+        try {
+            if (usersApi && typeof usersApi.sendPasswordReset === 'function') {
+                await usersApi.sendPasswordReset(email)
+                alert('Password reset sent to ' + email)
+            } else {
+                alert('Password reset not available in this demo client')
+            }
+        } catch (e) {
+            console.error('Password reset failed', e)
+            alert('Failed to send password reset: ' + (e.message || e))
+        }
+    }
+
+    const handleSaveOfficeHours = () => {
+        (async () => {
+            try { localStorage.setItem('student:officeHours', officeHours) } catch (e) { }
+            try {
+                if (student && student.id && studentsApi && typeof studentsApi.updateStudent === 'function') {
+                    console.log('Persisting office hours for student', student.id)
+                    const { data, error } = await studentsApi.updateStudent(student.id, { office_hours: officeHours })
+                    if (error) {
+                        console.error('Failed to persist office hours', error)
+                        alert('Saved locally, but failed to persist to server')
+                        return
+                    }
+                }
+                alert('Office hours saved')
+            } catch (e) {
+                console.error('Error saving office hours', e)
+                alert('Failed to save office hours')
+            }
+        })()
+    }
+
+    const handleSaveSettings = async () => {
+        setSaving(true)
+        try {
+            // persist to localStorage
+            try {
+                localStorage.setItem('student:emailNotifications', JSON.stringify(!!notifications.emailNotifications))
+                localStorage.setItem('student:gradeAlerts', JSON.stringify(!!notifications.gradeAlerts))
+                localStorage.setItem('student:marketing', JSON.stringify(!!notifications.marketing))
+                localStorage.setItem('student:shareProfile', JSON.stringify(!!privacy.shareProfile))
+            } catch (e) { console.warn('localStorage save failed', e) }
+
+            if (student && student.id && studentsApi && typeof studentsApi.updateStudent === 'function') {
+                console.log('Saving preferences to Supabase for', student.id)
+                const payload = {
+                    office_hours: officeHours,
+                    preferences: JSON.stringify({ emailNotifications: !!notifications.emailNotifications, gradeAlerts: !!notifications.gradeAlerts, marketing: !!notifications.marketing, shareProfile: !!privacy.shareProfile })
+                }
+                const { data, error } = await studentsApi.updateStudent(student.id, payload)
+                if (error) {
+                    console.error('Failed to persist preferences', error)
+                    alert('Saved locally, but failed to save to server')
+                    setSaving(false)
+                    return
+                }
+            }
+
+            alert('Settings saved')
+        } catch (e) {
+            console.error('Error saving settings', e)
+            alert('Failed to save settings')
+        } finally {
+            setSaving(false)
+        }
+    }
+
+    const handleExportData = () => {
+        const payload = { profile, student, enrollments }
+        const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' })
+        const url = URL.createObjectURL(blob)
+        const a = document.createElement('a')
+        a.href = url
+        a.download = `${profile?.id || student?.id || 'student'}_data.json`
+        document.body.appendChild(a)
+        a.click()
+        a.remove()
+        URL.revokeObjectURL(url)
+    }
+
+    return (
+        <div>
+            <h3 style={{ marginTop: 0 }}>Settings</h3>
+            <div style={{ display: 'flex', gap: 16 }}>
+                <div style={{ flex: 1 }}>
+                    <h4>Notifications</h4>
+                    <label style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                        <span>Email notifications</span>
+                        <input type="checkbox" checked={!!notifications.emailNotifications} onChange={() => toggleNotification('emailNotifications')} />
+                    </label>
+                    <label style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                        <span>Grade alerts</span>
+                        <input type="checkbox" checked={!!notifications.gradeAlerts} onChange={() => toggleNotification('gradeAlerts')} />
+                    </label>
+                    <label style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                        <span>Marketing emails</span>
+                        <input type="checkbox" checked={!!notifications.marketing} onChange={() => toggleNotification('marketing')} />
+                    </label>
+
+                    <h4 style={{ marginTop: 12 }}>Privacy</h4>
+                    <label style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                        <span>Share profile with classmates</span>
+                        <input type="checkbox" checked={!!privacy.shareProfile} onChange={() => togglePrivacy('shareProfile')} />
+                    </label>
+
+                    <div style={{ marginTop: 12, display: 'flex', gap: 8 }}>
+                        <button className={styles.primaryBtn} onClick={handleChangePassword}>Send Password Reset</button>
+                        <button className={styles.secondaryBtn} onClick={handleExportData}>Export My Data</button>
+                        <button className={styles.primaryBtn} onClick={handleSaveSettings} disabled={saving}>Save Settings</button>
+                    </div>
+                </div>
+
+                <div style={{ width: 320 }}>
+                    <h4>Office Hours</h4>
+                    <textarea className={styles.input} value={officeHours} onChange={e => setOfficeHours(e.target.value)} rows={6} />
+                    <div style={{ marginTop: 8 }}>
+                        <button className={styles.primaryBtn} onClick={handleSaveOfficeHours}>Save</button>
+                    </div>
+                </div>
+            </div>
         </div>
     )
 }
@@ -310,6 +469,7 @@ export default function StudentDashboard({ onLogout }) {
                     {tab === 'Overview' && <Overview student={student} loading={studentLoading || enrollLoading} profile={profile} enrollments={enrollments} />}
                     {tab === 'Profile Management' && <ProfileManagement student={student} loading={studentLoading} profile={profile} />}
                     {tab === 'Academic Info' && <AcademicInfo student={student} loading={studentLoading || enrollLoading} profile={profile} enrollments={enrollments} />}
+                    {tab === 'Settings' && <SettingsTab student={student} profile={profile} enrollments={enrollments} />}
                 </section>
             </main>
         </div>
