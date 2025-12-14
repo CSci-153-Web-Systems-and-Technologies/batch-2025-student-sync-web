@@ -105,6 +105,7 @@ function DegreePrograms({ programs = [] }) {
     const [savingEdit, setSavingEdit] = React.useState(false)
 
     const viewProgram = async (prog) => {
+        console.log('viewProgram clicked', prog && (prog.id || prog.name))
         setViewing(prog)
         setLoadingStudents(true)
         try {
@@ -125,6 +126,7 @@ function DegreePrograms({ programs = [] }) {
     }
 
     const startEdit = (prog) => setEditingProgram({ ...prog })
+    const _startEdit = (prog) => { console.log('startEdit clicked', prog && (prog.id || prog.name)); return startEdit(prog) }
     const cancelEdit = () => setEditingProgram(null)
 
     const saveEdit = async () => {
@@ -150,6 +152,7 @@ function DegreePrograms({ programs = [] }) {
     }
 
     const deleteProgram = async (prog) => {
+        console.log('deleteProgram clicked', prog && (prog.id || prog.name))
         if (!prog || !prog.id) return
         if (!confirm('Deactivate this program? This will hide it from listings.')) return
         try {
@@ -173,7 +176,7 @@ function DegreePrograms({ programs = [] }) {
                     <button className={styles.primaryBtn} onClick={() => (typeof window.__openAddForm === 'function' ? window.__openAddForm('program') : null)}>Add Programs</button>
                 </div>
             </div>
-                <div className={styles.programGrid}>
+            <div className={styles.programGrid}>
                 {(programs || []).map((prog, i) => (
                     <div key={prog.id || i} className={styles.programCard}>
                         <h4>{prog.name}</h4>
@@ -182,17 +185,17 @@ function DegreePrograms({ programs = [] }) {
                             <div className={styles.detailItem}>Department: {prog.department || prog.dept || '—'}</div>
                             <div className={styles.detailItem}>Coordinator: {prog.coordinator || '—'}</div>
                             <div className={styles.detailItem}>Credits Required: {prog.credits || prog.credit_hours || '—'}</div>
-                            <div className={styles.detailItem}>Enrollment: {prog.enrollment_count ?? prog.enrollment ?? '-' } students</div>
+                            <div className={styles.detailItem}>Enrollment: {prog.enrollment_count ?? prog.enrollment ?? '-'} students</div>
                         </div>
                         <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
                             <button className={styles.viewBtn} onClick={() => viewProgram(prog)}>View Students</button>
-                            <button className={styles.actionBtnSecondary} onClick={() => startEdit(prog)}>✏️ Edit</button>
+                            <button className={styles.actionBtnSecondary} onClick={() => _startEdit(prog)}>✏️ Edit</button>
                             <button className={styles.dangerBtn} onClick={() => deleteProgram(prog)}>🗑️ Delete</button>
                         </div>
                     </div>
                 ))}
             </div>
-
+            <button className={styles.viewBtn} onClick={() => viewCourse(course)}>View</button>
             {viewing && (
                 <div className={styles.addOverlay} role="dialog" aria-modal="true">
                     <div className={styles.addCard} style={{ maxWidth: 800 }}>
@@ -249,6 +252,7 @@ function CourseManagement({ courses = [] }) {
     const [savingCourse, setSavingCourse] = React.useState(false)
 
     const viewCourse = async (course) => {
+        console.log('viewCourse clicked', course && (course.id || course.name))
         // open a simple details modal; could fetch more data if needed
         setViewingCourse(course)
     }
@@ -256,6 +260,7 @@ function CourseManagement({ courses = [] }) {
     const closeViewCourse = () => setViewingCourse(null)
 
     const startEditCourse = (course) => setEditingCourse({ ...course })
+    const _startEditCourse = (course) => { console.log('startEditCourse clicked', course && (course.id || course.name)); return startEditCourse(course) }
     const cancelEditCourse = () => setEditingCourse(null)
 
     const saveCourseEdit = async () => {
@@ -282,6 +287,7 @@ function CourseManagement({ courses = [] }) {
     }
 
     const deleteCourse = async (course) => {
+        console.log('deleteCourse clicked', course && (course.id || course.name))
         if (!course || !course.id) return
         if (!confirm('Deactivate this course? This will hide it from listings.')) return
         try {
@@ -339,7 +345,7 @@ function CourseManagement({ courses = [] }) {
             <div className={styles.searchBox}>
                 <input placeholder="🔍 Search courses..." />
             </div>
-                <div className={styles.programGrid}>
+            <div className={styles.programGrid}>
                 {(courses || []).map((course, i) => (
                     <div key={course.id || i} className={styles.programCard}>
                         <h4>{course.name}</h4>
@@ -355,7 +361,7 @@ function CourseManagement({ courses = [] }) {
                         </div>
                         <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
                             <button className={styles.viewBtn} onClick={() => viewCourse(course)}>View Details</button>
-                            <button className={styles.actionBtnSecondary} onClick={() => startEditCourse(course)}>✏️ Edit</button>
+                            <button className={styles.actionBtnSecondary} onClick={() => _startEditCourse(course)}>✏️ Edit</button>
                             <button className={styles.dangerBtn} onClick={() => deleteCourse(course)}>🗑️ Delete</button>
                         </div>
                     </div>
@@ -407,8 +413,69 @@ function CourseManagement({ courses = [] }) {
 
 function StudentManagement({ students = [] }) {
     // replaced prompt-based add with top-level form via onOpenAdd
+    const [viewingStudent, setViewingStudent] = React.useState(null)
+    const [editingStudent, setEditingStudent] = React.useState(null)
+    const [savingStudent, setSavingStudent] = React.useState(false)
+    const [loadingStudentDetails, setLoadingStudentDetails] = React.useState(false)
 
+    const viewStudent = async (s) => {
+        console.log('viewStudent clicked', s && (s.id || s.student_number || s.full_name))
+        // open details modal; could load more info if needed
+        setViewingStudent(s)
+    }
 
+    const closeViewStudent = () => setViewingStudent(null)
+
+    const startEditStudent = (s) => setEditingStudent(s?.id ? { ...s } : null)
+    const _startEditStudent = (s) => { console.log('startEditStudent clicked', s && (s.id || s.student_number || s.full_name)); return startEditStudent(s) }
+    const cancelEditStudent = () => setEditingStudent(null)
+
+    const saveStudentEdit = async () => {
+        if (!editingStudent || !editingStudent.id) return
+        setSavingStudent(true)
+        try {
+            // Update user profile if present
+            if (editingStudent.user && editingStudent.user.id) {
+                const uUpdates = {
+                    first_name: editingStudent.user.first_name,
+                    last_name: editingStudent.user.last_name,
+                    email: editingStudent.user.email
+                }
+                const { data: udata, error: uerr } = await apiUsers.updateProfile(editingStudent.user.id, uUpdates)
+                if (uerr) console.warn('User update error', uerr)
+            }
+
+            const sUpdates = {
+                student_number: editingStudent.student_number || editingStudent.student_id,
+                year_level: editingStudent.year_level,
+                gpa: editingStudent.gpa,
+                status: editingStudent.status
+            }
+            const { data, error } = await apiStudents.updateStudent(editingStudent.id, sUpdates)
+            if (error) throw error
+            alert('Student updated')
+            setEditingStudent(null)
+            window.location.reload()
+        } catch (e) {
+            alert('Failed updating student: ' + (e.message || e))
+        } finally {
+            setSavingStudent(false)
+        }
+    }
+
+    const deactivateStudent = async (s) => {
+        console.log('deactivateStudent clicked', s && (s.id || s.student_number || s.full_name))
+        if (!s || !s.id) return
+        if (!confirm('Deactivate this student? This will mark the student inactive.')) return
+        try {
+            const { data, error } = await apiStudents.updateStudent(s.id, { is_active: false, status: 'inactive' })
+            if (error) throw error
+            alert('Student deactivated')
+            window.location.reload()
+        } catch (e) {
+            alert('Failed deactivating student: ' + (e.message || e))
+        }
+    }
 
     return (
         <div className={styles.contentSection}>
@@ -454,7 +521,11 @@ function StudentManagement({ students = [] }) {
                                 {s.notes || ''}
                             </div>
 
-                            <button className={styles.viewBtn}>View Student</button>
+                            <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
+                                <button className={styles.viewBtn} onClick={() => viewStudent(s)}>View</button>
+                                <button className={styles.actionBtnSecondary} onClick={() => _startEditStudent(s)}>✏️ Edit</button>
+                                <button className={styles.dangerBtn} onClick={() => deactivateStudent(s)}>🗑️ Deactivate</button>
+                            </div>
                         </div>
                     )
                 })}
