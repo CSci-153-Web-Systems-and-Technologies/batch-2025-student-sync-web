@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react'
-import { useAuth, useAnnouncements, useCalendarEvents } from './hooks/useSupabase'
+import { useAuth } from './components/useAuth'
+import { useAnnouncements } from './components/useAnnouncements'
+import { useCalendarEvents } from './components/useCalendarEvents'
 import { supabase, announcements as apiAnnouncements, faculty as facultyApi, users as usersApi } from './supabase'
 import styles from './StudentDashboard.module.css'
 
