@@ -98,6 +98,70 @@ function StatCards({ totals }) {
 
 function DegreePrograms({ programs = [] }) {
     // replaced prompt-based add with top-level form via onOpen
+    const [viewing, setViewing] = React.useState(null)
+    const [studentsList, setStudentsList] = React.useState([])
+    const [loadingStudents, setLoadingStudents] = React.useState(false)
+    const [editingProgram, setEditingProgram] = React.useState(null)
+    const [savingEdit, setSavingEdit] = React.useState(false)
+
+    const viewProgram = async (prog) => {
+        setViewing(prog)
+        setLoadingStudents(true)
+        try {
+            const { data, error } = await apiStudents.getStudents({ programId: prog.id })
+            if (error) throw error
+            setStudentsList(data || [])
+        } catch (e) {
+            alert('Failed loading students: ' + (e.message || e))
+            setStudentsList([])
+        } finally {
+            setLoadingStudents(false)
+        }
+    }
+
+    const closeView = () => {
+        setViewing(null)
+        setStudentsList([])
+    }
+
+    const startEdit = (prog) => setEditingProgram({ ...prog })
+    const cancelEdit = () => setEditingProgram(null)
+
+    const saveEdit = async () => {
+        if (!editingProgram || !editingProgram.id) return
+        setSavingEdit(true)
+        try {
+            const updates = {
+                name: editingProgram.name,
+                department: editingProgram.department,
+                coordinator: editingProgram.coordinator,
+                credits: editingProgram.credits || editingProgram.total_credits || editingProgram.totalCredits
+            }
+            const { data, error } = await apiDegreePrograms.updateProgram(editingProgram.id, updates)
+            if (error) throw error
+            alert('Program updated')
+            setEditingProgram(null)
+            window.location.reload()
+        } catch (e) {
+            alert('Failed updating program: ' + (e.message || e))
+        } finally {
+            setSavingEdit(false)
+        }
+    }
+
+    const deleteProgram = async (prog) => {
+        if (!prog || !prog.id) return
+        if (!confirm('Deactivate this program? This will hide it from listings.')) return
+        try {
+            const { data, error } = await apiDegreePrograms.updateProgram(prog.id, { is_active: false })
+            if (error) throw error
+            alert('Program deactivated')
+            window.location.reload()
+        } catch (e) {
+            alert('Failed deactivating program: ' + (e.message || e))
+        }
+    }
+
     return (
         <div className={styles.contentSection}>
             <div className={styles.sectionHeader}>
@@ -109,7 +173,7 @@ function DegreePrograms({ programs = [] }) {
                     <button className={styles.primaryBtn} onClick={() => (typeof window.__openAddForm === 'function' ? window.__openAddForm('program') : null)}>Add Programs</button>
                 </div>
             </div>
-            <div className={styles.programGrid}>
+                <div className={styles.programGrid}>
                 {(programs || []).map((prog, i) => (
                     <div key={prog.id || i} className={styles.programCard}>
                         <h4>{prog.name}</h4>
@@ -118,12 +182,62 @@ function DegreePrograms({ programs = [] }) {
                             <div className={styles.detailItem}>Department: {prog.department || prog.dept || '—'}</div>
                             <div className={styles.detailItem}>Coordinator: {prog.coordinator || '—'}</div>
                             <div className={styles.detailItem}>Credits Required: {prog.credits || prog.credit_hours || '—'}</div>
-                            <div className={styles.detailItem}>Enrollment: {prog.enrollment_count ?? prog.enrollment ?? '-'} students</div>
+                            <div className={styles.detailItem}>Enrollment: {prog.enrollment_count ?? prog.enrollment ?? '-' } students</div>
                         </div>
-                        <button className={styles.viewBtn}>View Student Program</button>
+                        <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
+                            <button className={styles.viewBtn} onClick={() => viewProgram(prog)}>View Students</button>
+                            <button className={styles.actionBtnSecondary} onClick={() => startEdit(prog)}>✏️ Edit</button>
+                            <button className={styles.dangerBtn} onClick={() => deleteProgram(prog)}>🗑️ Delete</button>
+                        </div>
                     </div>
                 ))}
             </div>
+
+            {viewing && (
+                <div className={styles.addOverlay} role="dialog" aria-modal="true">
+                    <div className={styles.addCard} style={{ maxWidth: 800 }}>
+                        <div className={styles.addHeader}>
+                            <h3>Students in {viewing.name}</h3>
+                            <button className={styles.closeBtn} onClick={closeView} aria-label="Close">✖</button>
+                        </div>
+                        <div style={{ padding: 12 }}>
+                            {loadingStudents ? <div>Loading…</div> : (
+                                <div style={{ maxHeight: 360, overflowY: 'auto' }}>
+                                    {(studentsList || []).length === 0 ? <div className={styles.muted}>No students found for this program.</div> : (
+                                        (studentsList || []).map(s => (
+                                            <div key={s.id || s.student_id} style={{ padding: 8, borderBottom: '1px solid #eee' }}>
+                                                <strong>{(s.user && `${s.user.first_name || ''} ${s.user.last_name || ''}`) || s.full_name || s.student_number || s.id}</strong>
+                                                <div style={{ fontSize: 13, color: '#666' }}>{s.student_number || s.student_id || ''} — Year {s.year_level || '—'}</div>
+                                            </div>
+                                        ))
+                                    )}
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {editingProgram && (
+                <div className={styles.addOverlay} role="dialog" aria-modal="true">
+                    <div className={styles.addCard} style={{ maxWidth: 700 }}>
+                        <div className={styles.addHeader}>
+                            <h3>Edit Program — {editingProgram.name}</h3>
+                            <button className={styles.closeBtn} onClick={cancelEdit} aria-label="Close">✖</button>
+                        </div>
+                        <div style={{ padding: 12 }}>
+                            <label className={styles.formRow}>Name<input className={styles.input} value={editingProgram.name || ''} onChange={e => setEditingProgram(p => ({ ...p, name: e.target.value }))} /></label>
+                            <label className={styles.formRow}>Department<input className={styles.input} value={editingProgram.department || ''} onChange={e => setEditingProgram(p => ({ ...p, department: e.target.value }))} /></label>
+                            <label className={styles.formRow}>Coordinator<input className={styles.input} value={editingProgram.coordinator || ''} onChange={e => setEditingProgram(p => ({ ...p, coordinator: e.target.value }))} /></label>
+                            <label className={styles.formRow}>Credits<input className={styles.input} value={editingProgram.credits || editingProgram.total_credits || ''} onChange={e => setEditingProgram(p => ({ ...p, credits: e.target.value }))} /></label>
+                            <div style={{ marginTop: 12, display: 'flex', gap: 8 }}>
+                                <button className={styles.primaryBtn} onClick={saveEdit} disabled={savingEdit}>{savingEdit ? 'Saving…' : 'Save'}</button>
+                                <button className={styles.secondaryBtn} onClick={cancelEdit}>Cancel</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     )
 }
