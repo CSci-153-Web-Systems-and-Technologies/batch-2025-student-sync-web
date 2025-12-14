@@ -16,7 +16,7 @@ function Topbar({ user, onLogout }) {
 }
 
 function Tabs({ value, onChange }) {
-    const tabs = ['Overview', 'Courses', 'Schedule', 'Communications']
+    const tabs = ['Overview', 'Courses', 'Schedule', 'Communications', 'Settings']
     return (
         <div className={styles.tabs} role="tablist">
             {tabs.map(t => (
@@ -116,6 +116,90 @@ function CommunicationsTab({ announcements = [] }) {
                         <p className={styles.commText}>{a.content}</p>
                     </div>
                 ))}
+            </div>
+        </div>
+    )
+}
+
+function SettingsTab({ faculty }) {
+    const [profile, setProfile] = useState(() => ({
+        first_name: faculty?.user?.first_name || faculty?.user?.first_name || '',
+        last_name: faculty?.user?.last_name || faculty?.user?.last_name || '',
+        email: faculty?.user?.email || '' ,
+        title: faculty?.title || faculty?.position || ''
+    }))
+
+    const [officeHours, setOfficeHours] = useState(() => localStorage.getItem('faculty:officeHours') || '')
+    const [saving, setSaving] = useState(false)
+
+    const handleSaveOfficeHours = () => {
+        try { localStorage.setItem('faculty:officeHours', officeHours) } catch (e) { }
+        alert('Office hours saved')
+    }
+
+    const handleUpdateProfile = async () => {
+        setSaving(true)
+        try {
+            if (!faculty) throw new Error('No faculty record')
+            // update faculty table
+            if (faculty.id) {
+                const { data, error } = await facultyApi.updateFaculty(faculty.id, { title: profile.title })
+                if (error) throw error
+            }
+            // update linked user profile if present
+            if (faculty.user && faculty.user.id) {
+                const { data, error } = await usersApi.updateProfile(faculty.user.id, { first_name: profile.first_name, last_name: profile.last_name, email: profile.email })
+                if (error) throw error
+            }
+            alert('Profile saved')
+        } catch (e) {
+            console.error('Failed saving profile', e)
+            alert('Failed saving profile: ' + (e.message || e))
+        } finally {
+            setSaving(false)
+        }
+    }
+
+    const handleSendPasswordReset = async () => {
+        try {
+            if (usersApi && typeof usersApi.sendPasswordReset === 'function') {
+                await usersApi.sendPasswordReset(profile.email || faculty?.user?.email)
+                alert('Password reset sent')
+            } else if (supabase.auth && typeof supabase.auth.resetPasswordForEmail === 'function') {
+                await supabase.auth.resetPasswordForEmail(profile.email || faculty?.user?.email)
+                alert('Password reset sent')
+            } else {
+                alert('Password reset not supported in this client')
+            }
+        } catch (e) {
+            console.error('Password reset failed', e)
+            alert('Failed to send password reset: ' + (e.message || e))
+        }
+    }
+
+    return (
+        <div>
+            <h3 style={{ marginTop: 0 }}>Settings</h3>
+            <div style={{ display: 'flex', gap: 16 }}>
+                <div style={{ flex: 1 }}>
+                    <h4>Profile</h4>
+                    <label style={{ display: 'block', marginBottom: 8 }}>First name<input className={styles.input} value={profile.first_name} onChange={e => setProfile(p => ({ ...p, first_name: e.target.value }))} /></label>
+                    <label style={{ display: 'block', marginBottom: 8 }}>Last name<input className={styles.input} value={profile.last_name} onChange={e => setProfile(p => ({ ...p, last_name: e.target.value }))} /></label>
+                    <label style={{ display: 'block', marginBottom: 8 }}>Email<input className={styles.input} value={profile.email} onChange={e => setProfile(p => ({ ...p, email: e.target.value }))} /></label>
+                    <label style={{ display: 'block', marginBottom: 8 }}>Title<input className={styles.input} value={profile.title} onChange={e => setProfile(p => ({ ...p, title: e.target.value }))} /></label>
+                    <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
+                        <button className={styles.primaryBtn} onClick={handleUpdateProfile} disabled={saving}>{saving ? 'Saving…' : 'Save Profile'}</button>
+                        <button className={styles.secondaryBtn} onClick={handleSendPasswordReset}>Send Password Reset</button>
+                    </div>
+                </div>
+
+                <div style={{ width: 320 }}>
+                    <h4>Office Hours</h4>
+                    <textarea className={styles.input} value={officeHours} onChange={e => setOfficeHours(e.target.value)} rows={6} />
+                    <div style={{ marginTop: 8 }}>
+                        <button className={styles.primaryBtn} onClick={handleSaveOfficeHours}>Save Office Hours</button>
+                    </div>
+                </div>
             </div>
         </div>
     )
@@ -259,6 +343,7 @@ export default function FacultyDashboardWithSupabase({ onLogout }) {
                     {tab === 'Courses' && <CoursesTab sections={sections} onOpenRoster={openRoster} />}
                     {tab === 'Schedule' && <ScheduleTab events={events} />}
                     {tab === 'Communications' && <CommunicationsTab announcements={announcements} />}
+                    {tab === 'Settings' && <SettingsTab faculty={faculty} />}
                 </section>
             </main>
 

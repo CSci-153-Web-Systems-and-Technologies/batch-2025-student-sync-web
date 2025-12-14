@@ -398,6 +398,84 @@
 
 .programDegree { color: #6b6b6b; font-size: 13px; }
 
+/* Buttons (consistent with Admin styles) */
+.primaryBtn {
+    background: linear-gradient(135deg, #1a2332 0%, #0b1320 100%);
+    color: #fff;
+    border: none;
+    padding: 10px 16px;
+    border-radius: 10px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 600;
+    transition: all 0.22s ease;
+    box-shadow: 0 6px 18px rgba(11,19,32,0.14);
+}
+.primaryBtn:hover { transform: translateY(-2px); box-shadow: 0 10px 24px rgba(11,19,32,0.18); }
+
+.secondaryBtn {
+    background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+    color: #0b1320;
+    border: 1px solid rgba(0,0,0,0.08);
+    padding: 8px 12px;
+    border-radius: 10px;
+    cursor: pointer;
+    font-size: 13px;
+    transition: all 0.18s ease;
+}
+.secondaryBtn:hover { transform: translateY(-1px); box-shadow: 0 6px 14px rgba(0,0,0,0.06); }
+
+.dangerBtn {
+    background: #fff0f0;
+    color: #8b1d1d;
+    border: 1px solid rgba(139,29,29,0.08);
+    padding: 8px 12px;
+    border-radius: 10px;
+    cursor: pointer;
+}
+.dangerBtn:hover { background: #ffecec; transform: translateY(-1px); }
+
+/* Modal styles */
+.modal-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(10,12,16,0.45);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1200;
+}
+.modal {
+    background: linear-gradient(135deg,#ffffff 0%, #fbfdff 100%);
+    border-radius: 12px;
+    width: min(980px, 96%);
+    max-height: 86vh;
+    overflow: auto;
+    box-shadow: 0 20px 60px rgba(11,19,32,0.3);
+    border: 1px solid rgba(0,0,0,0.06);
+}
+.modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 18px;
+    border-bottom: 1px solid rgba(0,0,0,0.04);
+    font-weight: 700;
+}
+.modal-body { padding: 16px 18px; }
+.modal-actions { padding: 12px 18px; border-top: 1px solid rgba(0,0,0,0.04); display:flex; justify-content:flex-end; gap:8px; }
+.modal-close { background: transparent; border: none; cursor: pointer; font-size: 18px; }
+
+/* Small utilities */
+.alt { background: transparent; border: 1px solid rgba(0,0,0,0.06); padding: 8px 10px; border-radius: 8px; cursor: pointer; }
+
+/* Inputs styling consistent */
+.input { width: 100%; padding: 10px 12px; border-radius: 8px; border: 1px solid rgba(0,0,0,0.08); box-shadow: 0 2px 6px rgba(0,0,0,0.04); }
+
+@media (max-width: 720px) {
+    .overviewGrid { grid-template-columns: 1fr; }
+}
+
 .programDetails { display: flex; flex-direction: column; gap: 6px; color: #555; font-size: 13px; }
 .detailItem { color: #666; }
 

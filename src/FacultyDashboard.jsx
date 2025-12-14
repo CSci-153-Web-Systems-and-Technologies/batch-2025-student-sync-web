@@ -16,7 +16,7 @@ function Topbar({ name, onLogout }) {
 }
 
 function Tabs({ value, onChange }) {
-    const tabs = ['Overview', 'Courses', 'Schedule', 'Communications']
+    const tabs = ['Overview', 'Courses', 'Schedule', 'Communications', 'Settings']
     return (
         <div className={styles.tabs} role="tablist">
             {tabs.map(t => (
@@ -116,6 +116,128 @@ function CommunicationsTab({ announcements = [] }) {
                         <p className={styles.commText}>{a.content}</p>
                     </div>
                 ))}
+            </div>
+        </div>
+    )
+}
+
+function SettingsTab({ faculty }) {
+    const [profile, setProfile] = useState(() => ({
+        first_name: faculty?.first_name || '',
+        last_name: faculty?.last_name || '',
+        email: faculty?.email || '',
+        title: faculty?.title || ''
+    }))
+
+    const [notifications, setNotifications] = useState(() => ({
+        emailCourseUpdates: JSON.parse(localStorage.getItem('faculty:emailCourseUpdates') || 'true'),
+        officeHourAlerts: JSON.parse(localStorage.getItem('faculty:officeHourAlerts') || 'true')
+    }))
+
+    const [officeHours, setOfficeHours] = useState(() => localStorage.getItem('faculty:officeHours') || '')
+    const [saving, setSaving] = useState(false)
+
+    const toggleNotification = (key) => {
+        setNotifications(n => {
+            const next = { ...n, [key]: !n[key] }
+            try { localStorage.setItem(`faculty:${key}`, JSON.stringify(next[key])) } catch (e) { }
+            return next
+        })
+    }
+
+    const handleUpdateProfile = async () => {
+        setSaving(true)
+        try {
+            // update users/profile and faculty record if available
+            if (faculty && faculty.id) {
+                // update faculty table
+                const { data: fdata, error: ferr } = await supabase.from('faculty').update({
+                    title: profile.title,
+                    department: faculty.department || faculty.dept || null
+                }).eq('id', faculty.id)
+                if (ferr) throw ferr
+            }
+
+            // attempt to update users table where user id exists
+            if (faculty && faculty.user && faculty.user.id) {
+                const { data: udata, error: uerr } = await supabase.from('users').update({
+                    first_name: profile.first_name,
+                    last_name: profile.last_name,
+                    email: profile.email
+                }).eq('id', faculty.user.id)
+                if (uerr) throw uerr
+            }
+
+            alert('Profile saved')
+        } catch (e) {
+            console.error('Failed saving profile', e)
+            alert('Failed saving profile: ' + (e.message || e))
+        } finally {
+            setSaving(false)
+        }
+    }
+
+    const handleChangePassword = async () => {
+        const email = profile.email || faculty?.email
+        if (!email) return alert('No email available')
+        try {
+            if (supabase.auth && typeof supabase.auth.resetPasswordForEmail === 'function') {
+                await supabase.auth.resetPasswordForEmail(email)
+                alert('Password reset email sent to ' + email)
+            } else if (supabase.auth && supabase.auth.api && typeof supabase.auth.api.resetPasswordForEmail === 'function') {
+                await supabase.auth.api.resetPasswordForEmail(email)
+                alert('Password reset email sent to ' + email)
+            } else {
+                alert('Password reset not supported in this client; please use system admin')
+            }
+        } catch (e) {
+            console.error('Change password failed', e)
+            alert('Failed to send password reset: ' + (e.message || e))
+        }
+    }
+
+    const handleSaveOfficeHours = () => {
+        try { localStorage.setItem('faculty:officeHours', officeHours) } catch (e) { }
+        alert('Office hours saved')
+    }
+
+    return (
+        <div>
+            <h3 style={{ marginTop: 0 }}>Settings</h3>
+            <div style={{ display: 'flex', gap: 16 }}>
+                <div style={{ flex: 1 }}>
+                    <h4>Profile</h4>
+                    <label style={{ display: 'block', marginBottom: 8 }}>First name<input className={styles.input} value={profile.first_name} onChange={e => setProfile(p => ({ ...p, first_name: e.target.value }))} /></label>
+                    <label style={{ display: 'block', marginBottom: 8 }}>Last name<input className={styles.input} value={profile.last_name} onChange={e => setProfile(p => ({ ...p, last_name: e.target.value }))} /></label>
+                    <label style={{ display: 'block', marginBottom: 8 }}>Email<input className={styles.input} value={profile.email} onChange={e => setProfile(p => ({ ...p, email: e.target.value }))} /></label>
+                    <label style={{ display: 'block', marginBottom: 8 }}>Title<input className={styles.input} value={profile.title} onChange={e => setProfile(p => ({ ...p, title: e.target.value }))} /></label>
+                    <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
+                        <button className={styles.primaryBtn} onClick={handleUpdateProfile} disabled={saving}>{saving ? 'Saving…' : 'Save Profile'}</button>
+                        <button className={styles.secondaryBtn} onClick={handleChangePassword}>Send Password Reset</button>
+                    </div>
+                </div>
+
+                <div style={{ width: 320 }}>
+                    <h4>Preferences</h4>
+                    <div style={{ marginBottom: 8 }}>
+                        <label style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <span>Email course enrollment updates</span>
+                            <input type="checkbox" checked={!!notifications.emailCourseUpdates} onChange={() => toggleNotification('emailCourseUpdates')} />
+                        </label>
+                    </div>
+                    <div style={{ marginBottom: 8 }}>
+                        <label style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <span>Office hour booking alerts</span>
+                            <input type="checkbox" checked={!!notifications.officeHourAlerts} onChange={() => toggleNotification('officeHourAlerts')} />
+                        </label>
+                    </div>
+
+                    <h4 style={{ marginTop: 12 }}>Office Hours</h4>
+                    <textarea className={styles.input} value={officeHours} onChange={e => setOfficeHours(e.target.value)} rows={6} />
+                    <div style={{ marginTop: 8 }}>
+                        <button className={styles.primaryBtn} onClick={handleSaveOfficeHours}>Save Office Hours</button>
+                    </div>
+                </div>
             </div>
         </div>
     )
@@ -316,6 +438,7 @@ export default function FacultyDashboard({ onLogout, initialFaculty }) {
                     {tab === 'Courses' && <CoursesTab sections={faculty.sections} onOpenRoster={openRoster} />}
                     {tab === 'Schedule' && <ScheduleTab events={faculty.events} />}
                     {tab === 'Communications' && <CommunicationsTab announcements={[]} />}
+                    {tab === 'Settings' && <SettingsTab faculty={faculty} />}
                 </section>
             </main>
 
