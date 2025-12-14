@@ -372,45 +372,6 @@ function FacultyManagement({ faculty = [] }) {
                     const phone = f.phone || '—'
                     const status = f.status || (f.is_active === false ? 'On Leave' : 'Active')
                     const coursesTeaching = f.courses || f.coursesTeaching || []
-                    // If this faculty is being edited show inline edit card
-                    if (editingFaculty && editingFaculty.id === f.id) {
-                        return (
-                            <div key={f.id || i} className={styles.facultyCard}>
-                                <div style={{ padding: 12 }}>
-                                    <h4>Edit Profile for {name}</h4>
-                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-                                        <label className={styles.formRow}>First Name<input className={styles.input} value={editingFaculty.user?.first_name || ''} onChange={e => setEditingFaculty(it => ({ ...it, user: { ...(it.user||{}), first_name: e.target.value } }))} /></label>
-                                        <label className={styles.formRow}>Last Name<input className={styles.input} value={editingFaculty.user?.last_name || ''} onChange={e => setEditingFaculty(it => ({ ...it, user: { ...(it.user||{}), last_name: e.target.value } }))} /></label>
-                                        <label className={styles.formRow}>Email<input className={styles.input} value={editingFaculty.user?.email || ''} onChange={e => setEditingFaculty(it => ({ ...it, user: { ...(it.user||{}), email: e.target.value } }))} /></label>
-                                        <label className={styles.formRow}>Phone<input className={styles.input} value={editingFaculty.user?.phone || editingFaculty.phone || ''} onChange={e => setEditingFaculty(it => ({ ...it, user: { ...(it.user||{}), phone: e.target.value }, phone: e.target.value }))} /></label>
-                                    </div>
-
-                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginTop: 8 }}>
-                                        <label className={styles.formRow}>Title<input className={styles.input} value={editingFaculty.title || ''} onChange={e => setEditingFaculty(it => ({ ...it, title: e.target.value }))} /></label>
-                                        <label className={styles.formRow}>Department<input className={styles.input} value={editingFaculty.department || ''} onChange={e => setEditingFaculty(it => ({ ...it, department: e.target.value }))} /></label>
-                                    </div>
-
-                                    <div style={{ marginTop: 10 }}>
-                                        <h5 style={{ marginBottom: 8 }}>Assigned Sections</h5>
-                                        <div style={{ maxHeight: 160, overflowY: 'auto', border: '1px solid #eee', padding: 8 }}>
-                                            {(sections || []).map(s => (
-                                                <label key={s.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '4px 0' }}>
-                                                    <input type="checkbox" checked={selectedSectionIds.includes(s.id)} onChange={() => toggleSection(s.id)} />
-                                                    <div style={{ fontSize: 13 }}>{s.course?.code || s.course?.name} — {s.section_number || s.section || s.id} <span style={{ color: '#666', fontSize: 12 }}>({s.term?.name || ''})</span></div>
-                                                </label>
-                                            ))}
-                                        </div>
-                                    </div>
-
-                                    <div style={{ marginTop: 12, display: 'flex', gap: 8 }}>
-                                        <button className={styles.primaryBtn} onClick={saveFacultyAssignments} disabled={savingFaculty}>{savingFaculty ? 'Saving…' : 'Save'}</button>
-                                        <button className={styles.secondaryBtn} onClick={closeEdit}>Cancel</button>
-                                    </div>
-                                </div>
-                            </div>
-                        )
-                    }
-
                     return (
                         <div key={f.id || i} className={styles.facultyCard}>
                             <div className={styles.facultyHeader}>
@@ -593,47 +554,6 @@ function Communications() {
                             </div>
                         </div>
                     </div>
-                    {editingFaculty && (
-                        <div className={styles.addOverlay} role="dialog" aria-modal="true">
-                            <div className={styles.addCard} style={{ maxWidth: 800 }}>
-                                <div className={styles.addHeader}>
-                                    <h3>Edit Faculty — {editingFaculty.user ? `${editingFaculty.user.first_name} ${editingFaculty.user.last_name}` : editingFaculty.id}</h3>
-                                    <button className={styles.closeBtn} onClick={closeEdit} aria-label="Close">✖</button>
-                                </div>
-
-                                <div style={{ padding: 12 }}>
-                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-                                        <label className={styles.formRow}>First Name<input className={styles.input} value={editingFaculty.user?.first_name || ''} onChange={e => setEditingFaculty(f => ({ ...f, user: { ...(f.user || {}), first_name: e.target.value } }))} /></label>
-                                        <label className={styles.formRow}>Last Name<input className={styles.input} value={editingFaculty.user?.last_name || ''} onChange={e => setEditingFaculty(f => ({ ...f, user: { ...(f.user || {}), last_name: e.target.value } }))} /></label>
-                                        <label className={styles.formRow}>Email<input className={styles.input} value={editingFaculty.user?.email || ''} onChange={e => setEditingFaculty(f => ({ ...f, user: { ...(f.user || {}), email: e.target.value } }))} /></label>
-                                        <label className={styles.formRow}>Phone<input className={styles.input} value={editingFaculty.user?.phone || editingFaculty.phone || ''} onChange={e => setEditingFaculty(f => ({ ...f, user: { ...(f.user || {}), phone: e.target.value }, phone: e.target.value }))} /></label>
-                                    </div>
-
-                                    <label className={styles.formRow}>Title<input className={styles.input} value={editingFaculty.title || ''} onChange={e => setEditingFaculty(f => ({ ...f, title: e.target.value }))} /></label>
-                                    <label className={styles.formRow}>Department<input className={styles.input} value={editingFaculty.department || ''} onChange={e => setEditingFaculty(f => ({ ...f, department: e.target.value }))} /></label>
-
-                                    <div style={{ marginTop: 10 }}>
-                                        <h4 style={{ marginBottom: 8 }}>Assign Sections</h4>
-                                        {loadingSections ? <div>Loading sections…</div> : (
-                                            <div style={{ maxHeight: 260, overflowY: 'auto', border: '1px solid #eee', padding: 8 }}>
-                                                {(sections || []).map(s => (
-                                                    <label key={s.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 4px' }}>
-                                                        <input type="checkbox" checked={selectedSectionIds.includes(s.id)} onChange={() => toggleSection(s.id)} />
-                                                        <div style={{ fontSize: 14 }}>{s.course?.code || s.course?.name} — {s.section_number || s.section || s.id} <span style={{ color: '#666', fontSize: 12 }}>({s.term?.name || ''})</span></div>
-                                                    </label>
-                                                ))}
-                                            </div>
-                                        )}
-                                    </div>
-
-                                    <div style={{ marginTop: 12, display: 'flex', gap: 8 }}>
-                                        <button className={styles.primaryBtn} onClick={saveFacultyAssignments} disabled={savingFaculty}>{savingFaculty ? 'Saving…' : 'Save'}</button>
-                                        <button className={styles.secondaryBtn} onClick={closeEdit}>Cancel</button>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    )}
                 </div>
             </div>
 
