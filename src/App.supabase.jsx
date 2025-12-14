@@ -67,6 +67,7 @@ function SignupForm({ onSubmit, loading }) {
         password: '',
         role: 'student'
     })
+    const [showPassword, setShowPassword] = useState(false)
 
     const handleChange = (e) => {
         setFormData({ ...formData, [e.target.name]: e.target.value })
@@ -112,15 +113,21 @@ function SignupForm({ onSubmit, loading }) {
             </div>
             <div className="field">
                 <label>Password</label>
-                <input
-                    type="password"
-                    name="password"
-                    placeholder="••••••••"
-                    value={formData.password}
-                    onChange={handleChange}
-                    required
-                    minLength={6}
-                />
+                <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                    <input
+                        type={showPassword ? 'text' : 'password'}
+                        name="password"
+                        placeholder="Create a password (min 6 chars)"
+                        value={formData.password}
+                        onChange={handleChange}
+                        required
+                        minLength={6}
+                        style={{ flex: 1 }}
+                    />
+                    <button type="button" className="link" onClick={() => setShowPassword(s => !s)} style={{ whiteSpace: 'nowrap' }}>
+                        {showPassword ? 'Hide' : 'Show'}
+                    </button>
+                </div>
             </div>
             <div className="field">
                 <label>Role</label>
