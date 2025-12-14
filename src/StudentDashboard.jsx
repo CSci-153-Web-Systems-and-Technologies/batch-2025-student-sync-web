@@ -2,7 +2,7 @@ import React, { useState } from 'react'
 import styles from './StudentDashboard.module.css'
 import { useAuth, useUserProfile, useStudent, useEnrollments } from './hooks/useSupabase'
 import { users as usersApi, students as studentsApi } from './supabase'
-import { downloadFile } from './utils/supabaseUtils'
+import { downloadFile, logActivity } from './utils/supabaseUtils'
 
 function Topbar({ name, onLogout }) {
     return (
@@ -363,6 +363,7 @@ function AcademicInfo({ student, profile, loading, enrollments = [] }) {
 
     const [stats, setStats] = React.useState(null)
     const [msg, setMsg] = React.useState(null)
+    const [downloading, setDownloading] = React.useState({})
 
     React.useEffect(() => {
         let mounted = true
@@ -396,13 +397,23 @@ function AcademicInfo({ student, profile, loading, enrollments = [] }) {
         }
 
         const path = mapping[type]
+        const filenameMap = {
+            certificate: `${studentNumber}_certificate.pdf`,
+            transcript: `${studentNumber}_transcript.pdf`,
+            qr: `${studentNumber}_qr.png`
+        }
+
         try {
+            setDownloading(d => ({ ...d, [type]: true }))
             setMsg({ type: 'info', text: 'Preparing download...' })
-            await downloadFile(bucket, path)
+            await downloadFile(bucket, path, filenameMap[type])
             setMsg({ type: 'success', text: 'Download started' })
+            try { logActivity(student.id, 'download', { type }) } catch (e) { console.warn('logActivity failed', e) }
         } catch (e) {
             console.error('Download error', e)
             setMsg({ type: 'error', text: `Failed to download ${type}.` })
+        } finally {
+            setDownloading(d => ({ ...d, [type]: false }))
         }
     }
 
@@ -420,7 +431,7 @@ function AcademicInfo({ student, profile, loading, enrollments = [] }) {
                     <div><dt>Semester</dt><dd>{student?.semester || 'N/A'}</dd></div>
                     <div><dt>Status</dt><dd style={{ textTransform: 'capitalize' }}>{student?.user?.status || 'N/A'}</dd></div>
                 </dl>
-                <button className={styles.downloadBtn} onClick={() => handleDownload('certificate')}>Download Certificate</button>
+                <button className={styles.downloadBtn} onClick={() => handleDownload('certificate')} disabled={!!downloading.certificate}>{downloading.certificate ? 'Downloading...' : 'Download Certificate'}</button>
             </div>
 
             <div className={styles.infoCard}>
@@ -432,14 +443,14 @@ function AcademicInfo({ student, profile, loading, enrollments = [] }) {
                     <div><dt>Completed</dt><dd>{completedCourses.length} courses</dd></div>
                     <div><dt>Expected Grad</dt><dd>{student?.expected_graduation_date || 'N/A'}</dd></div>
                 </dl>
-                <button className={styles.downloadBtn} onClick={() => handleDownload('transcript')}>Download Transcript</button>
+                <button className={styles.downloadBtn} onClick={() => handleDownload('transcript')} disabled={!!downloading.transcript}>{downloading.transcript ? 'Downloading...' : 'Download Transcript'}</button>
             </div>
 
             <div className={styles.infoCard}>
                 <h4>QR Code</h4>
                 <div className={styles.qrLarge}>QR Code</div>
                 <p className={styles.muted} style={{ fontSize: '12px', marginTop: '12px' }}>Use this QR code for campus verification</p>
-                <button className={styles.downloadBtn} onClick={() => handleDownload('qr')}>Download QR</button>
+                <button className={styles.downloadBtn} onClick={() => handleDownload('qr')} disabled={!!downloading.qr}>{downloading.qr ? 'Downloading...' : 'Download QR'}</button>
                 {msg && <div style={{ marginTop: 8, color: msg.type === 'error' ? 'crimson' : (msg.type === 'success' ? 'green' : '#444') }}>{msg.text}</div>}
             </div>
         </div>
