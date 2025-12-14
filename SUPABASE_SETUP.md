@@ -340,3 +340,42 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
 - [Supabase JavaScript Client](https://supabase.com/docs/reference/javascript)
 - [Row Level Security Guide](https://supabase.com/docs/guides/auth/row-level-security)
 - [Real-time Subscriptions](https://supabase.com/docs/guides/realtime)
+
+## Quick CLI / SQL commands
+
+Below are explicit example commands you can run locally to apply the included SQL files. Replace `<CONN>` with your Postgres connection string (found in Supabase Dashboard → Settings → Database → Connection string) or use the Supabase SQL editor UI.
+
+Using `psql` (Postgres client):
+
+```bash
+# Apply schema
+psql "<CONN>" -f supabase/schema.sql
+
+# Apply seed data (optional)
+psql "<CONN>" -f supabase/seed.sql
+```
+
+If you prefer using the Supabase dashboard UI:
+
+1. Open Supabase project → SQL → New query
+2. Paste the contents of `supabase/schema.sql` and run
+3. Paste `supabase/seed.sql` and run (optional)
+
+Using the Supabase CLI (optional):
+
+```bash
+# Install CLI if not present
+# npm install -g supabase
+
+# Link to a project (follow prompts)
+supabase login
+supabase link --project-ref <project-ref>
+
+# There isn't currently a single 'apply SQL file' command in the CLI
+# but you can use `psql` against the connection string provided in the dashboard.
+```
+
+## Troubleshooting connection strings
+
+- To find the connection string in the Supabase dashboard: Project → Settings → Database → Connection string
+- For `psql` use the full URI form: `postgres://<user>:<password>@<host>:<port>/<database>`
