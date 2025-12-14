@@ -24,6 +24,19 @@
     z-index: 100;
 }
 
+.hamburger {
+    background: transparent;
+    border: none;
+    font-size: 20px;
+    padding: 8px;
+    border-radius: 8px;
+    cursor: pointer;
+}
+
+.hamburger:hover {
+    background: rgba(11, 19, 32, 0.04);
+}
+
 .brandText {
     font-weight: 700;
 }
@@ -128,8 +141,182 @@
 
 .main {
     padding: 28px 32px;
-    max-width: 1400px;
-    margin: 0 auto;
+    height: 100%;
+    overflow: auto;
+}
+
+/* Layout to make the dashboard full-bleed and sidebar-based */
+.contentWrap {
+    display: grid;
+    grid-template-columns: 260px 1fr;
+    gap: 24px;
+    height: calc(100vh - 72px);
+    padding: 20px 32px;
+    box-sizing: border-box;
+}
+
+.sidebar {
+    background: var(--panel);
+    border-radius: 12px;
+    padding: 18px;
+    border: 1px solid rgba(0, 0, 0, 0.06);
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    box-shadow: var(--card-shadow);
+}
+
+.sidebar.collapsed {
+    width: 72px;
+    padding: 12px 8px;
+    align-items: center;
+}
+
+.sidebar.collapsed .brandSmall,
+.sidebar.collapsed .sidebarUser {
+    display: none;
+}
+
+.sidebar.collapsed .sideLink,
+.sidebar.collapsed .sideLinkActive {
+    padding: 10px 6px;
+    text-align: center;
+    font-size: 12px;
+}
+
+.sidebar,
+.contentWrap {
+    transition: all 220ms ease-in-out;
+}
+
+.contentWrap.sidebarClosed {
+    grid-template-columns: 0 1fr;
+}
+
+.hidden {
+    width: 0 !important;
+    padding: 0 !important;
+    border: none !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
+    transform: translateX(-8px) !important;
+}
+
+.sideIcon {
+    display: inline-block;
+    width: 22px;
+    text-align: center;
+    margin-right: 10px;
+}
+
+.sideText {
+    vertical-align: middle;
+}
+
+.sideLink:focus-visible,
+.sideLinkActive:focus-visible {
+    outline: 3px solid rgba(102, 126, 234, 0.18);
+    outline-offset: 2px;
+}
+
+.sidebar.collapsed .sideText {
+    position: absolute !important;
+    width: 1px !important;
+    height: 1px !important;
+    padding: 0 !important;
+    margin: -1px !important;
+    overflow: hidden !important;
+    clip: rect(0 0 0 0) !important;
+    white-space: nowrap !important;
+    border: 0 !important;
+}
+
+.sidebar.collapsed .sideIcon {
+    margin-right: 0;
+}
+
+/* show tooltip on hover when collapsed */
+.sideLink {
+    position: relative;
+}
+
+.sideLink::after {
+    display: none;
+    pointer-events: none;
+}
+
+.sidebar.collapsed .sideLink::after {
+    content: attr(title);
+    position: absolute;
+    left: 84px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: rgba(11, 19, 32, 0.92);
+    color: #fff;
+    padding: 6px 10px;
+    border-radius: 6px;
+    white-space: nowrap;
+    z-index: 500;
+    font-size: 13px;
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.24);
+    display: none;
+}
+
+.sidebar.collapsed .sideLink:hover::after {
+    display: block;
+}
+
+.sidebarHeader {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.brandSmall {
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.sidebarUser {
+    font-size: 13px;
+    color: var(--muted);
+}
+
+.sidebarNav {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-top: 8px;
+}
+
+.sideLink {
+    padding: 10px 12px;
+    border-radius: 8px;
+    text-decoration: none;
+    color: var(--primary);
+    font-weight: 600;
+}
+
+.sideLinkActive {
+    padding: 10px 12px;
+    border-radius: 8px;
+    text-decoration: none;
+    background: linear-gradient(135deg, #ffffff 0%, #f1f5ff 100%);
+    color: var(--primary);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    font-weight: 700;
+}
+
+.sideLinkActive:hover {
+    transform: none;
+}
+
+.sidebarFooter {
+    margin-top: auto;
+    display: flex;
+    gap: 8px;
 }
 
 .welcome {
@@ -241,6 +428,53 @@
     padding: 32px;
     border: 1px solid rgba(0, 0, 0, 0.06);
     box-shadow: 0 6px 20px rgba(0, 0, 0, 0.08);
+}
+
+/* Ensure all tabs use the same full content width layout as Communications */
+.section,
+.contentSection {
+    width: 100%;
+    max-width: none;
+}
+
+/* Normalize main tab grids to two equal columns (communications style) */
+.programGrid,
+.communicationsGrid,
+.analyticsGrid,
+.reportsSection,
+.settingsGrid,
+.communicationsGrid,
+.reportsSection .reportColumn,
+.actionGrid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+}
+
+/* Ensure inner cards stretch to fill their grid cell */
+.programCard,
+.facultyCard,
+.degreeCard,
+.analyticsCard,
+.settingsCard,
+.announcementSection,
+.recentComms,
+.quickActions,
+.reportsSection .reportColumn {
+    width: 100%;
+}
+
+/* Fixed tab area to make all tabs the same size */
+.tabArea {
+    width: 100%;
+    max-width: 1120px;
+    margin: 0 auto;
+    box-sizing: border-box;
+    min-height: calc(100vh - 220px);
+}
+
+.contentSection {
+    min-height: 520px;
 }
 
 .sectionHeader {
@@ -1380,6 +1614,17 @@
     .dangerActions {
         grid-template-columns: repeat(2, 1fr);
     }
+
+    .contentWrap {
+        grid-template-columns: 1fr;
+        height: auto;
+        padding: 12px;
+    }
+
+    .sidebar {
+        order: -1;
+        width: 100%;
+    }
 }
 
 @media (max-width: 640px) {
@@ -1471,5 +1716,59 @@
 
     .addForm .formRow:nth-child(-n+2) {
         grid-column: auto;
+    }
+}
+
+/* Responsive adjustments for tab sizing and grids */
+@media (max-width: 980px) {
+    .tabArea {
+        max-width: 100%;
+        padding: 0 12px;
+        min-height: auto;
+    }
+
+    .contentSection {
+        min-height: 360px;
+        padding: 20px;
+    }
+
+    .programGrid,
+    .communicationsGrid,
+    .analyticsGrid,
+    .reportsSection,
+    .settingsGrid,
+    .actionGrid {
+        grid-template-columns: 1fr;
+    }
+
+    /* Make the sidebar overlay on small screens */
+    .sidebar {
+        position: fixed;
+        left: 0;
+        top: 72px;
+        height: calc(100vh - 72px);
+        z-index: 600;
+        transform: translateX(0);
+        width: 220px;
+        /* smaller width so main page is partially visible */
+        padding: 12px;
+        /* reduce padding for compactness */
+        border-radius: 0 12px 12px 0;
+        background: rgba(255, 255, 255, 0.96);
+    }
+
+    .contentWrap.sidebarClosed {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 640px) {
+    .tabArea {
+        padding: 0 8px;
+    }
+
+    .contentSection {
+        min-height: 300px;
+        padding: 16px;
     }
 }

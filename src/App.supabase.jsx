@@ -1,5 +1,6 @@
 import React, { useState } from 'react'
-import { useAuth } from './hooks/useSupabase'
+import { useNavigate } from 'react-router-dom'
+import { useAuth } from './components/useAuth'
 import StudentDashboardWithSupabase from './StudentDashboard.supabase'
 import AdminDashboard from './AdminDashboard'
 import FacultyDashboardWithSupabase from './FacultyDashboard.supabase'
@@ -66,6 +67,7 @@ function SignupForm({ onSubmit, loading }) {
         password: '',
         role: 'student'
     })
+    const [showPassword, setShowPassword] = useState(false)
 
     const handleChange = (e) => {
         setFormData({ ...formData, [e.target.name]: e.target.value })
@@ -111,15 +113,21 @@ function SignupForm({ onSubmit, loading }) {
             </div>
             <div className="field">
                 <label>Password</label>
-                <input
-                    type="password"
-                    name="password"
-                    placeholder="••••••••"
-                    value={formData.password}
-                    onChange={handleChange}
-                    required
-                    minLength={6}
-                />
+                <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                    <input
+                        type={showPassword ? 'text' : 'password'}
+                        name="password"
+                        placeholder="Create a password (min 6 chars)"
+                        value={formData.password}
+                        onChange={handleChange}
+                        required
+                        minLength={6}
+                        style={{ flex: 1 }}
+                    />
+                    <button type="button" className="link" onClick={() => setShowPassword(s => !s)} style={{ whiteSpace: 'nowrap' }}>
+                        {showPassword ? 'Hide' : 'Show'}
+                    </button>
+                </div>
             </div>
             <div className="field">
                 <label>Role</label>
@@ -140,8 +148,9 @@ function SignupForm({ onSubmit, loading }) {
     )
 }
 
-function AppWithSupabase() {
-    const [tab, setTab] = useState('signin')
+function AppWithSupabase({ initialTab = 'signin' }) {
+    const navigate = useNavigate()
+    const [tab, setTab] = useState(initialTab)
     const { user, loading, signIn, signUp, signOut, signInWithProvider, sendPasswordReset } = useAuth()
     const [forgotOpen, setForgotOpen] = useState(false)
     const [forgotLoading, setForgotLoading] = useState(false)
@@ -153,16 +162,50 @@ function AppWithSupabase() {
     // Fetch user role from database
     React.useEffect(() => {
         if (user) {
-            // Fetch user profile to get role
-            import('./supabase').then(({ users }) => {
-                users.getProfile(user.id).then(({ data, error }) => {
+            // Fetch user profile to get role. If missing (OAuth first-time sign-in),
+            // upsert a profile using auth user metadata so the app can route immediately.
+            import('./supabase').then(({ users, supabase }) => {
+                users.getProfile(user.id).then(async ({ data, error }) => {
                     if (data) {
                         setUserRole(data.role)
+                        return
                     }
+
+                    // No profile found: build a profile from auth user info / metadata
+                    const meta = user.user_metadata || {}
+                    const metaRole = (meta && (meta.role || meta.user_role))
+                    const role = metaRole ? String(metaRole).toLowerCase() : 'student'
+
+                    const profile = {
+                        id: user.id,
+                        email: user.email || '',
+                        first_name: meta.first_name || meta.full_name || '',
+                        last_name: meta.last_name || '',
+                        role: role,
+                        status: 'active'
+                    }
+
+                    try {
+                        const { error: upsertErr } = await supabase.from('users').upsert(profile, { onConflict: ['id'] })
+                        if (upsertErr) console.warn('Profile upsert failed:', upsertErr)
+                    } catch (e) {
+                        console.error('Error upserting profile:', e)
+                    }
+
+                    setUserRole(role)
                 })
             })
         }
     }, [user])
+
+    // Redirect to role-specific dashboard when authenticated
+    React.useEffect(() => {
+        if (user && userRole) {
+            if (userRole === 'admin') navigate('/admin', { replace: true })
+            else if (userRole === 'student') navigate('/student', { replace: true })
+            else if (userRole === 'faculty') navigate('/faculty', { replace: true })
+        }
+    }, [user, userRole, navigate])
 
     const handleSignIn = async (email, password) => {
         setAuthLoading(true)
@@ -182,7 +225,8 @@ function AppWithSupabase() {
         setAuthLoading(true)
         setError(null)
         try {
-            const { data, error } = await signInWithProvider('google')
+            const redirectTo = window.location.origin + '/signin'
+            const { data, error } = await signInWithProvider('google', redirectTo)
             if (error) {
                 setError(error.message)
                 setAuthLoading(false)
@@ -288,8 +332,8 @@ function AppWithSupabase() {
                                 <h2>Make academic life easier</h2>
                                 <p className="muted">Student Sync centralizes registration, announcements, and academic records — fast and secure.</p>
                                 <div className="landing-cta">
-                                    <button className="primary" onClick={() => { setTab('signin'); setError(null) }}>Sign In</button>
-                                    <button className="secondary" onClick={() => { setSignupOpen(true); setError(null) }}>Create Account</button>
+                                    <button className="primary" onClick={() => { navigate('/signin'); setError(null) }}>Sign In</button>
+                                    <button className="secondary" onClick={() => { navigate('/signup'); setError(null) }}>Create Account</button>
                                 </div>
                                 <div style={{ marginTop: 12 }}>
                                     <OAuthButton onClick={handleGoogleSignIn}>Continue with Google</OAuthButton>
@@ -330,6 +374,7 @@ function AppWithSupabase() {
                                 className={tab === 'signin' ? 'active' : ''}
                                 onClick={() => {
                                     setTab('signin')
+                                    navigate('/signin')
                                     setError(null)
                                 }}
                             >
@@ -338,8 +383,8 @@ function AppWithSupabase() {
                             <button
                                 className={tab === 'signup' ? 'active' : ''}
                                 onClick={() => {
-                                    // keep legacy tab behavior, but also allow modal signup
                                     setTab('signup')
+                                    navigate('/signup')
                                     setError(null)
                                 }}
                             >

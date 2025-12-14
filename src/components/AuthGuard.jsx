@@ -1,5 +1,5 @@
 import React from 'react'
-import { useAuth } from '../hooks/useSupabase'
+import { useAuth } from './useAuth'
 
 export default function AuthGuard({ children }) {
     const { user, loading } = useAuth()

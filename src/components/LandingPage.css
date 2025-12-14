@@ -1,0 +1,58 @@
+.page {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px
+}
+
+.card {
+    width: 520px;
+    max-width: 95%;
+    padding: 20px;
+    border-radius: 10px;
+    box-shadow: 0 6px 18px rgba(11, 19, 32, 0.06)
+}
+
+.brand {
+    margin-bottom: 12px
+}
+
+.logo {
+    font-weight: 700;
+    font-size: 20px;
+    background: #0b1320;
+    color: #fff;
+    padding: 8px;
+    border-radius: 6px;
+    display: inline-block
+}
+
+.tabs {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 12px
+}
+
+.tabs button {
+    padding: 8px 12px;
+    border-radius: 6px;
+    background: #f3f4f6;
+    border: 0
+}
+
+.tabs button.active {
+    background: #0b1320;
+    color: #fff
+}
+
+.form .field {
+    margin-bottom: 10px
+}
+
+.primary {
+    background: #0b1320;
+    color: #fff;
+    border: 0;
+    padding: 10px 14px;
+    border-radius: 8px
+}
