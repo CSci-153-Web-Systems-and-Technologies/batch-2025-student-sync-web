@@ -600,7 +600,88 @@ function Communications() {
     )
 }
 
-function AnalyticsReports() {
+function AnalyticsReports({ students = [], courses = [], faculty = [], programs = [] }) {
+
+    const downloadCSV = (filename, headers, rows) => {
+        const esc = (v) => String(v ?? '').replace(/"/g, '""')
+        const csv = [headers.join(',')].concat(rows.map(r => headers.map(h => `"${esc(r[h] ?? '')}"`).join(','))).join('\n')
+        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
+        const url = URL.createObjectURL(blob)
+        const a = document.createElement('a')
+        a.href = url
+        a.download = filename
+        document.body.appendChild(a)
+        a.click()
+        a.remove()
+        URL.revokeObjectURL(url)
+    }
+
+    const handleExportStudentDirectory = () => {
+        const headers = ['id', 'email', 'first_name', 'last_name', 'student_number', 'program', 'year_level', 'gpa', 'status']
+        const rows = (students || []).map(s => ({
+            id: s.id || '',
+            email: s.user?.email || '',
+            first_name: s.user?.first_name || '',
+            last_name: s.user?.last_name || '',
+            student_number: s.student_number || s.student_id || '',
+            program: s.program?.name || s.program || '',
+            year_level: s.year_level || '',
+            gpa: s.gpa ?? '',
+            status: s.status || (s.is_active === false ? 'Inactive' : 'Active')
+        }))
+        downloadCSV('student-directory.csv', headers, rows)
+    }
+
+    const handleCourseEnrollmentReport = () => {
+        const headers = ['code', 'name', 'credits', 'enrollment']
+        const rows = (courses || []).map(c => ({ code: c.code || '', name: c.name || '', credits: c.credits || c.credit_hours || '', enrollment: c.enrollment ?? c.enrollment_count ?? '' }))
+        downloadCSV('course-enrollment.csv', headers, rows)
+    }
+
+    const handleGPAAnalysisReport = () => {
+        const headers = ['id', 'name', 'gpa']
+        const rows = (students || []).map(s => ({ id: s.id || '', name: `${s.user?.first_name || ''} ${s.user?.last_name || ''}`.trim() || s.full_name || '', gpa: s.gpa ?? '' }))
+        downloadCSV('gpa-analysis.csv', headers, rows)
+    }
+
+    const handleGraduationTracking = () => {
+        const headers = ['id', 'name', 'expected_graduation_date', 'status']
+        const rows = (students || []).filter(s => s.is_graduated || s.status === 'graduated' || s.expected_graduation_date).map(s => ({ id: s.id || '', name: `${s.user?.first_name || ''} ${s.user?.last_name || ''}`.trim() || s.full_name || '', expected_graduation_date: s.expected_graduation_date || '', status: s.status || '' }))
+        downloadCSV('graduation-tracking.csv', headers, rows)
+    }
+
+    const handleFacultyLoadReport = () => {
+        const headers = ['id', 'name', 'department', 'courses']
+        const rows = (faculty || []).map(f => ({ id: f.id || '', name: f.user ? `${f.user.first_name || ''} ${f.user.last_name || ''}`.trim() : f.name || '', department: f.department || f.dept || '', courses: (f.courses || f.coursesTeaching || []).map(c => c.name || c).join('; ') }))
+        downloadCSV('faculty-load.csv', headers, rows)
+    }
+
+    const handleExportAcademicCalendar = async () => {
+        try {
+            const { data, error } = await apiCalendar.getEvents()
+            if (error) throw error
+            const headers = ['id', 'title', 'start_date', 'end_date', 'event_type', 'location']
+            const rows = (data || []).map(e => ({ id: e.id || '', title: e.title || e.name || '', start_date: e.start_date || '', end_date: e.end_date || '', event_type: e.event_type || '', location: e.location || '' }))
+            downloadCSV('academic-calendar.csv', headers, rows)
+        } catch (err) {
+            alert('Failed to export calendar: ' + (err.message || err))
+        }
+    }
+
+    const handleCommunicationLogs = async () => {
+        try {
+            const { data, error } = await apiAnnouncements.getAnnouncements()
+            if (error) throw error
+            const headers = ['id', 'title', 'content', 'published_at', 'target_audience']
+            const rows = (data || []).map(a => ({ id: a.id || '', title: a.title || '', content: a.content || '', published_at: a.published_at || '', target_audience: a.target_audience || '' }))
+            downloadCSV('communication-logs.csv', headers, rows)
+        } catch (err) {
+            alert('Failed to export communications: ' + (err.message || err))
+        }
+    }
+
+    const handleNotImplemented = (name) => () => alert(`${name} not implemented in demo`)
+
     return (
         <div className={styles.contentSection}>
             <div className={styles.analyticsGrid}>
@@ -688,11 +769,11 @@ function AnalyticsReports() {
                     <h4>📄 Academic Reports</h4>
                     <p className={styles.muted}>Generate comprehensive academic reports</p>
                     <div className={styles.reportList}>
-                        <button className={styles.reportItem}>📥 Complete Student Directory</button>
-                        <button className={styles.reportItem}>📊 Course Enrollment Report</button>
-                        <button className={styles.reportItem}>📈 GPA Analysis Report</button>
-                        <button className={styles.reportItem}>🎓 Graduation Tracking</button>
-                        <button className={styles.reportItem}>👨‍👩‍👧‍👦 Faculty Load Report</button>
+                        <button className={styles.reportItem} onClick={handleExportStudentDirectory}>📥 Complete Student Directory</button>
+                        <button className={styles.reportItem} onClick={handleCourseEnrollmentReport}>📊 Course Enrollment Report</button>
+                        <button className={styles.reportItem} onClick={handleGPAAnalysisReport}>📈 GPA Analysis Report</button>
+                        <button className={styles.reportItem} onClick={handleGraduationTracking}>🎓 Graduation Tracking</button>
+                        <button className={styles.reportItem} onClick={handleFacultyLoadReport}>👨‍👩‍👧‍👦 Faculty Load Report</button>
                     </div>
                 </div>
 
@@ -700,11 +781,11 @@ function AnalyticsReports() {
                     <h4>⚙️ System Reports</h4>
                     <p className={styles.muted}>Administrative and system analytics</p>
                     <div className={styles.reportList}>
-                        <button className={styles.reportItem}>📅 Academic Calendar Export</button>
-                        <button className={styles.reportItem}>💬 Communication Logs</button>
-                        <button className={styles.reportItem}>📊 System Activity Report</button>
-                        <button className={styles.reportItem}>💾 Data Backup Status</button>
-                        <button className={styles.reportItem}>📊 Usage Statistics</button>
+                        <button className={styles.reportItem} onClick={handleExportAcademicCalendar}>📅 Academic Calendar Export</button>
+                        <button className={styles.reportItem} onClick={handleCommunicationLogs}>💬 Communication Logs</button>
+                        <button className={styles.reportItem} onClick={handleNotImplemented('System Activity Report')}>📊 System Activity Report</button>
+                        <button className={styles.reportItem} onClick={handleNotImplemented('Data Backup Status')}>💾 Data Backup Status</button>
+                        <button className={styles.reportItem} onClick={handleNotImplemented('Usage Statistics')}>📊 Usage Statistics</button>
                     </div>
                 </div>
             </div>
@@ -976,7 +1057,7 @@ export default function AdminDashboard({ onLogout }) {
                     {tab === 'Student Management' && <StudentManagement students={students} />}
                     {tab === 'Faculty Management' && <FacultyManagement faculty={faculty} />}
                     {tab === 'Communications' && <Communications />}
-                    {tab === 'Analytics & Reports' && <AnalyticsReports />}
+                    {tab === 'Analytics & Reports' && <AnalyticsReports students={students} courses={courses} faculty={faculty} programs={programs} />}
                     {tab === 'Settings' && <Settings />}
                 </section>
                 {addForm.open && (
