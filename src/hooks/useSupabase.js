@@ -242,6 +242,34 @@ export function useEnrollments(studentId) {
         }
 
         fetchEnrollments()
+
+        // Subscribe to enrollment changes for this student
+        const channel = supabase
+            .channel('enrollments-changes')
+            .on(
+                'postgres_changes',
+                {
+                    event: '*',
+                    schema: 'public',
+                    table: 'enrollments',
+                    filter: `student_id=eq.${studentId}`
+                },
+                (payload) => {
+                    // Adjust local state based on event
+                    if (payload.eventType === 'INSERT') {
+                        setEnrollments(prev => [payload.new, ...prev])
+                    } else if (payload.eventType === 'UPDATE') {
+                        setEnrollments(prev => prev.map(item => item.id === payload.new.id ? payload.new : item))
+                    } else if (payload.eventType === 'DELETE') {
+                        setEnrollments(prev => prev.filter(item => item.id !== payload.old.id))
+                    }
+                }
+            )
+            .subscribe()
+
+        return () => {
+            supabase.removeChannel(channel)
+        }
     }, [studentId])
 
     return { enrollments, loading, error }
@@ -360,6 +388,7 @@ export function useFaculty() {
     useEffect(() => {
         const fetchFaculty = async () => {
             setLoading(true)
+            // Primary source: faculty table joined with user profile
             const { data, error } = await supabase
                 .from('faculty')
                 .select(`
@@ -370,8 +399,35 @@ export function useFaculty() {
 
             if (error) {
                 setError(error)
-            } else {
-                setFaculty(data || [])
+            }
+
+            // If faculty table has rows, use them
+            if (data && Array.isArray(data) && data.length > 0) {
+                setFaculty(data)
+                setLoading(false)
+                return
+            }
+
+            // Fallback: No faculty rows found — query users table for role = 'faculty'
+            try {
+                const { data: usersData, error: usersErr } = await supabase
+                    .from('users')
+                    .select('*')
+                    .eq('role', 'faculty')
+                    .order('last_name', { ascending: true })
+
+                if (usersErr) {
+                    // If users query fails, surface error
+                    setError(usersErr)
+                    setFaculty([])
+                } else {
+                    // Map users to faculty-like objects so callers can render consistently
+                    const fallback = (usersData || []).map(u => ({ id: u.id, user: u, department: u.department || null, title: u.title || null }))
+                    setFaculty(fallback)
+                }
+            } catch (e) {
+                setError(e)
+                setFaculty([])
             }
             setLoading(false)
         }

@@ -176,6 +176,7 @@ CREATE TABLE public.announcements (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     title TEXT NOT NULL,
     content TEXT NOT NULL,
+    meta JSONB DEFAULT '{}'::JSONB,
     priority announcement_priority DEFAULT 'medium',
     target_audience announcement_target DEFAULT 'all',
     program_id UUID REFERENCES degree_programs(id), -- if program_specific
@@ -335,6 +336,49 @@ BEGIN
     RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
+
+-- Function to fetch events the user created and upcoming events
+CREATE OR REPLACE FUNCTION public.get_user_and_upcoming_events(p_user_id UUID)
+RETURNS JSON AS $$
+DECLARE
+    v_result JSON;
+BEGIN
+    SELECT json_build_object(
+        'created_events', (
+            SELECT COALESCE(json_agg(json_build_object(
+                'id', id,
+                'title', title,
+                'description', description,
+                'event_type', event_type,
+                'start_date', start_date,
+                'end_date', end_date,
+                'is_all_day', is_all_day,
+                'location', location,
+                'created_at', created_at
+            ) ORDER BY start_date), '[]'::json)
+            FROM public.calendar_events
+            WHERE created_by = p_user_id
+        ),
+        'upcoming_events', (
+            SELECT COALESCE(json_agg(json_build_object(
+                'id', id,
+                'title', title,
+                'description', description,
+                'event_type', event_type,
+                'start_date', start_date,
+                'end_date', end_date,
+                'is_all_day', is_all_day,
+                'location', location,
+                'created_by', created_by
+            ) ORDER BY start_date), '[]'::json)
+            FROM public.calendar_events
+            WHERE end_date >= CURRENT_DATE
+        )
+    ) INTO v_result;
+
+    RETURN COALESCE(v_result, '{}'::json);
+END;
+$$ LANGUAGE plpgsql STABLE;
 
 -- =====================================================
 -- AUTH → profile sync: create a public.users row when auth.users entry is created

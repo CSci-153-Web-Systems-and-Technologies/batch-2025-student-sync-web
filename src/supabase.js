@@ -185,15 +185,23 @@ export const students = {
                     options: { data: { first_name, last_name, role: 'student' } }
                 })
 
-                if (signError && !signError.message?.includes('already registered')) {
+                // Allow non-fatal errors related to email confirmation delivery (e.g. SMTP not configured)
+                // Treat "already registered" and confirmation-send failures as non-blocking and continue.
+                if (signError && !/already registered|confirmation|sending confirmation/i.test(signError.message || '')) {
                     return { data: null, error: signError }
                 }
 
                 if (signData && signData.user && signData.user.id) {
                     userId = signData.user.id
                 }
+                // If signError mentioned confirmation but signData may still be present, proceed.
             } catch (e) {
-                return { data: null, error: e }
+                // Some environments throw when email sending fails; if it's only a confirmation-email issue, log and continue
+                if (e?.message && /confirmation|sending confirmation/i.test(e.message)) {
+                    console.warn('Warning during signUp: confirmation email failed to send, proceeding:', e.message)
+                } else {
+                    return { data: null, error: e }
+                }
             }
 
             // If signup didn't return an id (user may already exist), try to find profile in users table
@@ -328,7 +336,7 @@ export const faculty = {
                     options: { data: { first_name, last_name, role: 'faculty' } }
                 })
 
-                if (signError && !signError.message?.includes('already registered')) {
+                if (signError && !/already registered|confirmation|sending confirmation/i.test(signError.message || '')) {
                     return { data: null, error: signError }
                 }
 
@@ -336,7 +344,11 @@ export const faculty = {
                     userId = signData.user.id
                 }
             } catch (e) {
-                return { data: null, error: e }
+                if (e?.message && /confirmation|sending confirmation/i.test(e.message)) {
+                    console.warn('Warning during signUp: confirmation email failed to send, proceeding:', e.message)
+                } else {
+                    return { data: null, error: e }
+                }
             }
 
             if (!userId) {
@@ -582,9 +594,18 @@ export const announcements = {
 
     // Create announcement (admin only)
     createAnnouncement: async (announcementData) => {
+        const allowedFields = [
+            'title', 'content', 'meta', 'priority', 'target_audience',
+            'program_id', 'published_by', 'published_at', 'expires_at', 'is_active'
+        ]
+        const payload = {}
+        Object.keys(announcementData || {}).forEach(k => {
+            if (allowedFields.includes(k)) payload[k] = announcementData[k]
+        })
+
         const { data, error } = await supabase
             .from('announcements')
-            .insert(announcementData)
+            .insert(payload)
             .select()
             .single()
         return { data, error }

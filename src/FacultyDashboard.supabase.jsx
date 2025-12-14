@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { useAuth, useAnnouncements, useCalendarEvents } from './hooks/useSupabase'
-import { supabase, announcements as apiAnnouncements } from './supabase'
+import { supabase, announcements as apiAnnouncements, faculty as facultyApi, users as usersApi } from './supabase'
 import styles from './StudentDashboard.module.css'
 
 function Topbar({ user, onLogout }) {
@@ -16,7 +16,7 @@ function Topbar({ user, onLogout }) {
 }
 
 function Tabs({ value, onChange }) {
-    const tabs = ['Overview', 'Courses', 'Schedule', 'Communications']
+    const tabs = ['Overview', 'Courses', 'Schedule', 'Communications', 'Settings']
     return (
         <div className={styles.tabs} role="tablist">
             {tabs.map(t => (
@@ -121,6 +121,90 @@ function CommunicationsTab({ announcements = [] }) {
     )
 }
 
+function SettingsTab({ faculty }) {
+    const [profile, setProfile] = useState(() => ({
+        first_name: faculty?.user?.first_name || faculty?.user?.first_name || '',
+        last_name: faculty?.user?.last_name || faculty?.user?.last_name || '',
+        email: faculty?.user?.email || '',
+        title: faculty?.title || faculty?.position || ''
+    }))
+
+    const [officeHours, setOfficeHours] = useState(() => localStorage.getItem('faculty:officeHours') || '')
+    const [saving, setSaving] = useState(false)
+
+    const handleSaveOfficeHours = () => {
+        try { localStorage.setItem('faculty:officeHours', officeHours) } catch (e) { }
+        alert('Office hours saved')
+    }
+
+    const handleUpdateProfile = async () => {
+        setSaving(true)
+        try {
+            if (!faculty) throw new Error('No faculty record')
+            // update faculty table
+            if (faculty.id) {
+                const { data, error } = await facultyApi.updateFaculty(faculty.id, { title: profile.title })
+                if (error) throw error
+            }
+            // update linked user profile if present
+            if (faculty.user && faculty.user.id) {
+                const { data, error } = await usersApi.updateProfile(faculty.user.id, { first_name: profile.first_name, last_name: profile.last_name, email: profile.email })
+                if (error) throw error
+            }
+            alert('Profile saved')
+        } catch (e) {
+            console.error('Failed saving profile', e)
+            alert('Failed saving profile: ' + (e.message || e))
+        } finally {
+            setSaving(false)
+        }
+    }
+
+    const handleSendPasswordReset = async () => {
+        try {
+            if (usersApi && typeof usersApi.sendPasswordReset === 'function') {
+                await usersApi.sendPasswordReset(profile.email || faculty?.user?.email)
+                alert('Password reset sent')
+            } else if (supabase.auth && typeof supabase.auth.resetPasswordForEmail === 'function') {
+                await supabase.auth.resetPasswordForEmail(profile.email || faculty?.user?.email)
+                alert('Password reset sent')
+            } else {
+                alert('Password reset not supported in this client')
+            }
+        } catch (e) {
+            console.error('Password reset failed', e)
+            alert('Failed to send password reset: ' + (e.message || e))
+        }
+    }
+
+    return (
+        <div>
+            <h3 style={{ marginTop: 0 }}>Settings</h3>
+            <div style={{ display: 'flex', gap: 16 }}>
+                <div style={{ flex: 1 }}>
+                    <h4>Profile</h4>
+                    <label style={{ display: 'block', marginBottom: 8 }}>First name<input className={styles.input} value={profile.first_name} onChange={e => setProfile(p => ({ ...p, first_name: e.target.value }))} /></label>
+                    <label style={{ display: 'block', marginBottom: 8 }}>Last name<input className={styles.input} value={profile.last_name} onChange={e => setProfile(p => ({ ...p, last_name: e.target.value }))} /></label>
+                    <label style={{ display: 'block', marginBottom: 8 }}>Email<input className={styles.input} value={profile.email} onChange={e => setProfile(p => ({ ...p, email: e.target.value }))} /></label>
+                    <label style={{ display: 'block', marginBottom: 8 }}>Title<input className={styles.input} value={profile.title} onChange={e => setProfile(p => ({ ...p, title: e.target.value }))} /></label>
+                    <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
+                        <button className={styles.primaryBtn} onClick={handleUpdateProfile} disabled={saving}>{saving ? 'Saving…' : 'Save Profile'}</button>
+                        <button className={styles.secondaryBtn} onClick={handleSendPasswordReset}>Send Password Reset</button>
+                    </div>
+                </div>
+
+                <div style={{ width: 320 }}>
+                    <h4>Office Hours</h4>
+                    <textarea className={styles.input} value={officeHours} onChange={e => setOfficeHours(e.target.value)} rows={6} />
+                    <div style={{ marginTop: 8 }}>
+                        <button className={styles.primaryBtn} onClick={handleSaveOfficeHours}>Save Office Hours</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    )
+}
+
 export default function FacultyDashboardWithSupabase({ onLogout }) {
     const { user: authUser } = useAuth()
     const [faculty, setFaculty] = useState(null)
@@ -137,18 +221,43 @@ export default function FacultyDashboardWithSupabase({ onLogout }) {
         if (!authUser) return
         const fetch = async () => {
             setLoading(true)
-            // fetch faculty record by user id
-            const { data: fdata } = await supabase.from('faculty').select(`*, user:users(*)`).eq('user_id', authUser.id).single()
+
+            // Try to load faculty record using helper; some setups use faculty.id === auth user id
+            let fdata = null
+            try {
+                const { data, error } = await facultyApi.getFaculty(authUser.id)
+                if (data) fdata = data
+                // if error and no data, we'll fall back to user's profile below
+            } catch (e) {
+                // ignore and fall back
+            }
+
+            // If no faculty record exists, try to load the users profile and use it as a minimal faculty object
+            if (!fdata) {
+                try {
+                    const { data: profile } = await usersApi.getProfile(authUser.id)
+                    if (profile) {
+                        fdata = { user: profile }
+                    }
+                } catch (e) {
+                    // ignore
+                }
+            }
+
             setFaculty(fdata)
 
-            // fetch all course sections and filter by faculty user id
-            const { data: secs } = await supabase
-                .from('course_sections')
-                .select(`*, course:courses(*), term:academic_terms(*), faculty:faculty(*, user:users(*))`)
-                .order('course.code', { ascending: true })
+            // fetch all course sections and filter by faculty user id (best-effort)
+            try {
+                const { data: secs } = await supabase
+                    .from('course_sections')
+                    .select(`*, course:courses(*), term:academic_terms(*), faculty:faculty(*, user:users(*))`)
+                    .order('course.code', { ascending: true })
 
-            const mySections = (secs || []).filter(s => s.faculty && s.faculty.user && s.faculty.user.id === authUser.id)
-            setSections(mySections)
+                const mySections = (secs || []).filter(s => s.faculty && ((s.faculty.id === authUser.id) || (s.faculty.user && s.faculty.user.id === authUser.id)))
+                setSections(mySections)
+            } catch (e) {
+                setSections([])
+            }
 
             setLoading(false)
         }
@@ -199,6 +308,64 @@ export default function FacultyDashboardWithSupabase({ onLogout }) {
         }
     }
 
+    const handleRemoveStudent = async (enrollment) => {
+        console.log('handleRemoveStudent clicked', enrollment && enrollment.id)
+        if (!enrollment || !enrollment.id) return
+        if (!confirm('Remove this student from the section?')) return
+        try {
+            const { error } = await supabase.from('enrollments').delete().eq('id', enrollment.id)
+            if (error) throw error
+            // refresh roster
+            await openRoster(selectedSection)
+            alert('Student removed')
+        } catch (e) {
+            console.error('Failed removing student', e)
+            alert('Failed to remove student: ' + (e.message || e))
+        }
+    }
+
+    const handleSetGrade = async (enrollment) => {
+        console.log('handleSetGrade clicked', enrollment && enrollment.id)
+        if (!enrollment || !enrollment.id) return
+        const grade = window.prompt('Enter grade (e.g., A, B+, 85):', enrollment.grade || '')
+        if (grade === null) return
+        try {
+            const { error } = await supabase.from('enrollments').update({ grade }).eq('id', enrollment.id)
+            if (error) throw error
+            await openRoster(selectedSection)
+            alert('Grade updated')
+        } catch (e) {
+            console.error('Failed updating grade', e)
+            alert('Failed to update grade: ' + (e.message || e))
+        }
+    }
+
+    const exportRosterCSV = () => {
+        const rows = (roster || []).map(r => ({
+            enrollment_id: r.id || '',
+            student_id: r.student?.id || '',
+            student_number: r.student?.student_number || '',
+            first_name: r.student?.user?.first_name || '',
+            last_name: r.student?.user?.last_name || '',
+            email: r.student?.user?.email || '',
+            status: r.status || '',
+            grade: r.grade || ''
+        }))
+        if (!rows.length) return alert('No roster to export')
+        const headers = Object.keys(rows[0])
+        const esc = v => String(v ?? '').replace(/"/g, '""')
+        const csv = [headers.join(',')].concat(rows.map(r => headers.map(h => `"${esc(r[h])}"`).join(','))).join('\n')
+        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
+        const url = URL.createObjectURL(blob)
+        const a = document.createElement('a')
+        a.href = url
+        a.download = `${(selectedSection?.course?.code || 'section')}_roster.csv`
+        document.body.appendChild(a)
+        a.click()
+        a.remove()
+        URL.revokeObjectURL(url)
+    }
+
     const busy = loading || annLoading || eventsLoading
 
     if (busy) {
@@ -234,6 +401,7 @@ export default function FacultyDashboardWithSupabase({ onLogout }) {
                     {tab === 'Courses' && <CoursesTab sections={sections} onOpenRoster={openRoster} />}
                     {tab === 'Schedule' && <ScheduleTab events={events} />}
                     {tab === 'Communications' && <CommunicationsTab announcements={announcements} />}
+                    {tab === 'Settings' && <SettingsTab faculty={faculty} />}
                 </section>
             </main>
 
@@ -252,25 +420,7 @@ export default function FacultyDashboardWithSupabase({ onLogout }) {
                                 </div>
                                 <div style={{ display: 'flex', gap: 8 }}>
                                     <button className="secondary" onClick={sendAnnouncementToSection}>📣 Announce</button>
-                                    <button className="secondary" onClick={() => {
-                                        const rows = (roster || []).map(r => ({
-                                            student_id: r.student?.id || '',
-                                            student_number: r.student?.student_number || '',
-                                            first_name: r.student?.user?.first_name || '',
-                                            last_name: r.student?.user?.last_name || '',
-                                            email: r.student?.user?.email || ''
-                                        }))
-                                        const csv = [Object.keys(rows[0] || {}).join(','), ...rows.map(r => Object.values(r).map(v => `"${String(v).replace(/"/g, '""')}"`).join(','))].join('\n')
-                                        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
-                                        const url = URL.createObjectURL(blob)
-                                        const a = document.createElement('a')
-                                        a.href = url
-                                        a.download = `${(selectedSection?.course?.code || 'section')}_roster.csv`
-                                        document.body.appendChild(a)
-                                        a.click()
-                                        a.remove()
-                                        URL.revokeObjectURL(url)
-                                    }}>⬇️ Download CSV</button>
+                                    <button className="secondary" onClick={exportRosterCSV}>⬇️ Download CSV</button>
                                 </div>
                             </div>
                             <div style={{ marginTop: 12 }}>
@@ -286,6 +436,8 @@ export default function FacultyDashboardWithSupabase({ onLogout }) {
                                                 const mail = r.student?.user?.email
                                                 if (mail) window.location.href = `mailto:${mail}`
                                             }}>✉️ Email</button>
+                                            <button className="secondary" onClick={() => handleSetGrade(r)}>Set Grade</button>
+                                            <button className="dangerBtn" onClick={() => handleRemoveStudent(r)}>Remove</button>
                                         </div>
                                     </div>
                                 ))}
