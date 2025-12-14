@@ -247,6 +247,53 @@ export default function FacultyDashboard({ onLogout, initialFaculty }) {
         }
     }
 
+    const handleRemoveStudent = async (r) => {
+        console.log('handleRemoveStudent clicked', r && r.id)
+        if (!r || !r.id) return
+        if (!confirm('Remove this student from the section?')) return
+        try {
+            const { error } = await supabase.from('enrollments').delete().eq('id', r.id)
+            if (error) throw error
+            await openRoster(currentSection)
+            setActionMsg({ type: 'success', text: 'Student removed' })
+        } catch (e) {
+            console.error('Remove failed', e)
+            setActionMsg({ type: 'error', text: 'Failed to remove student' })
+        }
+    }
+
+    const handleSetGrade = async (r) => {
+        console.log('handleSetGrade clicked', r && r.id)
+        if (!r || !r.id) return
+        const grade = prompt('Enter grade (e.g., A, B+, 85):', r.grade || '')
+        if (grade === null) return
+        try {
+            const { error } = await supabase.from('enrollments').update({ grade }).eq('id', r.id)
+            if (error) throw error
+            await openRoster(currentSection)
+            setActionMsg({ type: 'success', text: 'Grade updated' })
+        } catch (e) {
+            console.error('Grade update failed', e)
+            setActionMsg({ type: 'error', text: 'Failed to update grade' })
+        }
+    }
+
+    const exportRosterCSV = () => {
+        const esc = v => String(v ?? '').replace(/"/g, '""')
+        const headers = ['name', 'email', 'studentId', 'status', 'grade']
+        const rows = (roster || []).map(r => headers.map(h => `"${esc(r[h])}"`).join(','))
+        const csv = [headers.join(',')].concat(rows).join('\n')
+        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
+        const url = URL.createObjectURL(blob)
+        const a = document.createElement('a')
+        a.href = url
+        a.download = `${(currentSection && (currentSection.courseName || currentSection.section)) || 'roster'}.csv`
+        document.body.appendChild(a)
+        a.click()
+        a.remove()
+        URL.revokeObjectURL(url)
+    }
+
     const buildMailto = (recipients, subject = '', body = '') => {
         if (!recipients) return '#'
         const list = Array.isArray(recipients) ? recipients.filter(Boolean) : [recipients]
@@ -302,16 +349,19 @@ export default function FacultyDashboard({ onLogout, initialFaculty }) {
                                     <div>
                                         <div style={{ fontWeight: 600 }}>{r.name}</div>
                                         <div style={{ fontSize: 13, color: '#666' }}>{r.email} {r.studentId ? `• ${r.studentId}` : ''}</div>
-                                        <div style={{ fontSize: 12, color: '#777' }}>Status: {r.status}</div>
+                                        <div style={{ fontSize: 12, color: '#777' }}>Status: {r.status}{r.grade ? ` • Grade: ${r.grade}` : ''}</div>
                                     </div>
                                     <div style={{ display: 'flex', gap: 8 }}>
                                         <a className={styles.viewBtn} href={buildMailto(r.email, 'Message from your instructor', 'Hello,')}>Email</a>
+                                        <button className={styles.secondaryBtn} onClick={() => handleSetGrade(r)}>Set Grade</button>
+                                        <button className={styles.dangerBtn} onClick={() => handleRemoveStudent(r)}>Remove</button>
                                     </div>
                                 </div>
                             ))}
                         </div>
-                        <div className="modal-actions" style={{ padding: 12 }}>
+                        <div className="modal-actions" style={{ padding: 12, display: 'flex', gap: 8 }}>
                             <button className="secondary" onClick={closeRoster}>Close</button>
+                            <button className={styles.actionBtn} onClick={exportRosterCSV}>Export Roster</button>
                         </div>
                     </div>
                 </div>
