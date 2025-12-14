@@ -218,7 +218,8 @@ function AppWithSupabase({ initialTab = 'signin' }) {
         setAuthLoading(true)
         setError(null)
         try {
-            const { data, error } = await signInWithProvider('google')
+            const redirectTo = window.location.origin + '/signin'
+            const { data, error } = await signInWithProvider('google', redirectTo)
             if (error) {
                 setError(error.message)
                 setAuthLoading(false)
@@ -365,6 +366,7 @@ function AppWithSupabase({ initialTab = 'signin' }) {
                             <button
                                 className={tab === 'signin' ? 'active' : ''}
                                 onClick={() => {
+                                    setTab('signin')
                                     navigate('/signin')
                                     setError(null)
                                 }}
@@ -374,6 +376,7 @@ function AppWithSupabase({ initialTab = 'signin' }) {
                             <button
                                 className={tab === 'signup' ? 'active' : ''}
                                 onClick={() => {
+                                    setTab('signup')
                                     navigate('/signup')
                                     setError(null)
                                 }}

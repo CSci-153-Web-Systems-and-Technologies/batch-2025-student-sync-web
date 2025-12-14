@@ -33,7 +33,9 @@
     cursor: pointer;
 }
 
-.hamburger:hover { background: rgba(11,19,32,0.04); }
+.hamburger:hover {
+    background: rgba(11, 19, 32, 0.04);
+}
 
 .brandText {
     font-weight: 700;
@@ -213,7 +215,7 @@
 
 .sideLink:focus-visible,
 .sideLinkActive:focus-visible {
-    outline: 3px solid rgba(102,126,234,0.18);
+    outline: 3px solid rgba(102, 126, 234, 0.18);
     outline-offset: 2px;
 }
 
@@ -228,28 +230,41 @@
     white-space: nowrap !important;
     border: 0 !important;
 }
-.sidebar.collapsed .sideIcon { margin-right: 0; }
+
+.sidebar.collapsed .sideIcon {
+    margin-right: 0;
+}
 
 /* show tooltip on hover when collapsed */
-.sideLink { position: relative; }
-.sideLink::after { display: none; pointer-events: none; }
+.sideLink {
+    position: relative;
+}
+
+.sideLink::after {
+    display: none;
+    pointer-events: none;
+}
+
 .sidebar.collapsed .sideLink::after {
     content: attr(title);
     position: absolute;
     left: 84px;
     top: 50%;
     transform: translateY(-50%);
-    background: rgba(11,19,32,0.92);
+    background: rgba(11, 19, 32, 0.92);
     color: #fff;
     padding: 6px 10px;
     border-radius: 6px;
     white-space: nowrap;
     z-index: 500;
     font-size: 13px;
-    box-shadow: 0 6px 18px rgba(0,0,0,0.24);
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.24);
     display: none;
 }
-.sidebar.collapsed .sideLink:hover::after { display: block; }
+
+.sidebar.collapsed .sideLink:hover::after {
+    display: block;
+}
 
 .sidebarHeader {
     display: flex;
@@ -294,7 +309,9 @@
     font-weight: 700;
 }
 
-.sideLinkActive:hover { transform: none; }
+.sideLinkActive:hover {
+    transform: none;
+}
 
 .sidebarFooter {
     margin-top: auto;
@@ -1732,10 +1749,12 @@
         height: calc(100vh - 72px);
         z-index: 600;
         transform: translateX(0);
-        width: 220px; /* smaller width so main page is partially visible */
-        padding: 12px; /* reduce padding for compactness */
+        width: 220px;
+        /* smaller width so main page is partially visible */
+        padding: 12px;
+        /* reduce padding for compactness */
         border-radius: 0 12px 12px 0;
-        background: rgba(255,255,255,0.96);
+        background: rgba(255, 255, 255, 0.96);
     }
 
     .contentWrap.sidebarClosed {
@@ -1744,6 +1763,12 @@
 }
 
 @media (max-width: 640px) {
-    .tabArea { padding: 0 8px; }
-    .contentSection { min-height: 300px; padding: 16px; }
+    .tabArea {
+        padding: 0 8px;
+    }
+
+    .contentSection {
+        min-height: 300px;
+        padding: 16px;
+    }
 }

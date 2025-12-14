@@ -43,8 +43,10 @@ export const auth = {
     },
 
     // Sign in with OAuth provider (Google, etc.)
-    signInWithProvider: async (provider) => {
-        const { data, error } = await supabase.auth.signInWithOAuth({ provider })
+    // Accepts optional `redirectTo` to control the post-OAuth return URL.
+    signInWithProvider: async (provider, redirectTo) => {
+        const options = redirectTo ? { redirectTo } : undefined
+        const { data, error } = await supabase.auth.signInWithOAuth({ provider, options })
         return { data, error }
     },
 

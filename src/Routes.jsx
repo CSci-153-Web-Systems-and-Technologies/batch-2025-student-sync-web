@@ -27,7 +27,7 @@ export default function AppRoutes() {
     return (
         <BrowserRouter>
             <Routes>
-                <Route path="/" element={<LandingPage />} />
+                <Route path="/" element={<Navigate to="/signin" replace />} />
                 <Route path="/signin" element={<AppWithSupabase initialTab={"signin"} />} />
                 <Route path="/signup" element={<AppWithSupabase initialTab={"signup"} />} />
                 <Route path="/forgot" element={<AppWithSupabase initialTab={"signin"} />} />
