@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react'
+import { NavLink, useLocation } from 'react-router-dom'
 import { useAuth } from './components/useAuth'
 import { useStudent } from './components/useStudent'
 import { useDegreePrograms } from './components/useDegreePrograms'
@@ -403,11 +404,21 @@ function AcademicInfo({ student, enrollments }) {
     )
 }
 
-function StudentDashboardWithSupabase({ onLogout }) {
-    const [activeTab, setActiveTab] = useState('Overview')
+function StudentDashboardWithSupabase({ onLogout, initialTab }) {
+    const [activeTab, setActiveTab] = useState(initialTab || 'Overview')
     const { user: authUser } = useAuth()
     const { student, loading: studentLoading } = useStudent(authUser?.id)
     const { enrollments, loading: enrollmentsLoading } = useEnrollments(authUser?.id)
+
+    const location = useLocation()
+
+    useEffect(() => {
+        const p = location.pathname || ''
+        if (p.startsWith('/student/profile')) setActiveTab('Profile Management')
+        else if (p.startsWith('/student/academic')) setActiveTab('Academic Info')
+        else if (p.startsWith('/student/settings')) setActiveTab('Settings')
+        else setActiveTab('Overview')
+    }, [location.pathname])
 
     const loading = studentLoading || enrollmentsLoading
 
@@ -442,7 +453,12 @@ function StudentDashboardWithSupabase({ onLogout }) {
                 <p className={styles.subtitle}>
                     Here's what's happening with your courses today
                 </p>
-                <Tabs value={activeTab} onChange={setActiveTab} />
+                <nav className={styles.tabs} aria-label="Student navigation">
+                    <NavLink to="/student/overview" className={({ isActive }) => isActive ? styles.tabActive : styles.tab}>Overview</NavLink>
+                    <NavLink to="/student/profile" className={({ isActive }) => isActive ? styles.tabActive : styles.tab}>Profile Management</NavLink>
+                    <NavLink to="/student/academic" className={({ isActive }) => isActive ? styles.tabActive : styles.tab}>Academic Info</NavLink>
+                    <NavLink to="/student/settings" className={({ isActive }) => isActive ? styles.tabActive : styles.tab}>Settings</NavLink>
+                </nav>
                 <section className={styles.section}>
                     {activeTab === 'Overview' && (
                         <Overview student={student} enrollments={enrollments} />
@@ -470,3 +486,5 @@ function StudentDashboardWithSupabase({ onLogout }) {
 }
 
 export default StudentDashboardWithSupabase
+
+export { Overview, ProfileManagement, AcademicInfo, SettingsTab }

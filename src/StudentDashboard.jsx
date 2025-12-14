@@ -460,8 +460,8 @@ function AcademicInfo({ student, profile, loading, enrollments = [] }) {
     )
 }
 
-export default function StudentDashboard({ onLogout }) {
-    const [tab, setTab] = useState('Overview')
+export default function StudentDashboard({ onLogout, initialTab }) {
+    const [tab, setTab] = useState(initialTab || 'Overview')
     const { user } = useAuth()
     const { profile } = useUserProfile(user?.id)
     // Try to use student record if profile contains student_id, otherwise fallback
