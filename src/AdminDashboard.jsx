@@ -1491,52 +1491,66 @@ export default function AdminDashboard({ onLogout, initialTab }) {
     return (
         <div className={`${styles.container} ${theme === 'dark' ? styles.dark : ''}`} data-theme={theme}>
             <Topbar name={adminName} onLogout={onLogout} onSearch={handleSearch} theme={theme} onToggleTheme={handleToggleTheme} />
-            <main className={styles.main}>
-                <h1 className={styles.welcome}>Admin Dashboard</h1>
-                <p className={styles.subtitle}>Welcome back, Admin! Manage students and system settings</p>
 
-                <StatCards totals={totals} />
-                <nav className={styles.tabs} aria-label="Admin navigation">
-                    <NavLink to="/admin/programs" className={({ isActive }) => isActive ? styles.tabActive : styles.tab}>Degree Programs</NavLink>
-                    <NavLink to="/admin/courses" className={({ isActive }) => isActive ? styles.tabActive : styles.tab}>Course Management</NavLink>
-                    <NavLink to="/admin/students" className={({ isActive }) => isActive ? styles.tabActive : styles.tab}>Student Management</NavLink>
-                    <NavLink to="/admin/faculty" className={({ isActive }) => isActive ? styles.tabActive : styles.tab}>Faculty Management</NavLink>
-                    <NavLink to="/admin/communications" className={({ isActive }) => isActive ? styles.tabActive : styles.tab}>Communications</NavLink>
-                    <NavLink to="/admin/analytics" className={({ isActive }) => isActive ? styles.tabActive : styles.tab}>Analytics & Reports</NavLink>
-                    <NavLink to="/admin/settings" className={({ isActive }) => isActive ? styles.tabActive : styles.tab}>Settings</NavLink>
-                </nav>
-
-                <section className={styles.section}>
-                    {tab === 'Degree Programs' && <DegreePrograms programs={programs} />}
-                    {tab === 'Course Management' && <CourseManagement courses={courses} />}
-                    {tab === 'Student Management' && <StudentManagement students={students} />}
-                    {tab === 'Faculty Management' && <FacultyManagement faculty={faculty} />}
-                    {tab === 'Communications' && <Communications />}
-                    {tab === 'Analytics & Reports' && <AnalyticsReports students={students} courses={courses} faculty={faculty} programs={programs} />}
-                    {tab === 'Settings' && <Settings />}
-                </section>
-                {addForm.open && (
-                    <div className={styles.addOverlay} role="dialog" aria-modal="true">
-                        <div className={styles.addCard}>
-                            <div className={styles.addHeader}>
-                                <h3>Add {addForm.type}</h3>
-                                <button className={styles.closeBtn} onClick={closeAddForm} aria-label="Close">✖</button>
-                            </div>
-
-                            <AddForm
-                                type={addForm.type}
-                                defaultData={addForm.data}
-                                onCancel={closeAddForm}
-                                onSubmit={handleAddSubmit}
-                                loading={addForm.loading}
-                                programs={programs}
-                                courses={courses}
-                                facultyList={faculty}
-                            />
-                        </div>
+            <div className={styles.contentWrap}>
+                <aside className={styles.sidebar} aria-label="Admin sidebar">
+                    <div className={styles.sidebarHeader}>
+                        <div className={styles.brandSmall}><span className={styles.shield}>🛡️</span> Admin Portal</div>
+                        <div className={styles.sidebarUser}>Hi, {adminName || 'Admin'}</div>
                     </div>
-                )}
-            </main>
+                    <nav className={styles.sidebarNav}>
+                        <NavLink to="/admin/programs" className={({ isActive }) => isActive ? styles.sideLinkActive : styles.sideLink}>Degree Programs</NavLink>
+                        <NavLink to="/admin/courses" className={({ isActive }) => isActive ? styles.sideLinkActive : styles.sideLink}>Course Management</NavLink>
+                        <NavLink to="/admin/students" className={({ isActive }) => isActive ? styles.sideLinkActive : styles.sideLink}>Student Management</NavLink>
+                        <NavLink to="/admin/faculty" className={({ isActive }) => isActive ? styles.sideLinkActive : styles.sideLink}>Faculty Management</NavLink>
+                        <NavLink to="/admin/communications" className={({ isActive }) => isActive ? styles.sideLinkActive : styles.sideLink}>Communications</NavLink>
+                        <NavLink to="/admin/analytics" className={({ isActive }) => isActive ? styles.sideLinkActive : styles.sideLink}>Analytics & Reports</NavLink>
+                        <NavLink to="/admin/settings" className={({ isActive }) => isActive ? styles.sideLinkActive : styles.sideLink}>Settings</NavLink>
+                    </nav>
+                    <div className={styles.sidebarFooter}>
+                        <button className={styles.primaryBtn} onClick={() => window.__openAddForm && window.__openAddForm('program')}>➕ Add</button>
+                        <button className={styles.secondaryBtn} onClick={onLogout}>Logout</button>
+                    </div>
+                </aside>
+
+                <main className={styles.main}>
+                    <h1 className={styles.welcome}>Admin Dashboard</h1>
+                    <p className={styles.subtitle}>Welcome back, Admin! Manage students and system settings</p>
+
+                    <StatCards totals={totals} />
+
+                    <section className={styles.section}>
+                        {tab === 'Degree Programs' && <DegreePrograms programs={programs} />}
+                        {tab === 'Course Management' && <CourseManagement courses={courses} />}
+                        {tab === 'Student Management' && <StudentManagement students={students} />}
+                        {tab === 'Faculty Management' && <FacultyManagement faculty={faculty} />}
+                        {tab === 'Communications' && <Communications />}
+                        {tab === 'Analytics & Reports' && <AnalyticsReports students={students} courses={courses} faculty={faculty} programs={programs} />}
+                        {tab === 'Settings' && <Settings />}
+                    </section>
+                    {addForm.open && (
+                        <div className={styles.addOverlay} role="dialog" aria-modal="true">
+                            <div className={styles.addCard}>
+                                <div className={styles.addHeader}>
+                                    <h3>Add {addForm.type}</h3>
+                                    <button className={styles.closeBtn} onClick={closeAddForm} aria-label="Close">✖</button>
+                                </div>
+
+                                <AddForm
+                                    type={addForm.type}
+                                    defaultData={addForm.data}
+                                    onCancel={closeAddForm}
+                                    onSubmit={handleAddSubmit}
+                                    loading={addForm.loading}
+                                    programs={programs}
+                                    courses={courses}
+                                    facultyList={faculty}
+                                />
+                            </div>
+                        </div>
+                    )}
+                </main>
+            </div>
         </div>
     )
 }

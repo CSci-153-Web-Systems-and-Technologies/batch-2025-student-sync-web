@@ -1,6 +1,7 @@
 import React, { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import './LandingPage.css'
+// OAuth is handled on the /signin page; Landing just routes there
 
 function Field({ label, placeholder, type = 'text', value, onChange }) {
     return (
@@ -15,6 +16,7 @@ export default function LandingPage({ onAuth }) {
     const [tab, setTab] = useState('login')
     const [loginRole, setLoginRole] = useState('Student')
     const navigate = useNavigate()
+    
 
     const handleSubmit = (e) => {
         e.preventDefault()
@@ -25,7 +27,6 @@ export default function LandingPage({ onAuth }) {
     }
 
     const handleGoogle = () => {
-        // placeholder for Google OAuth flow; route to sign-in for now
         navigate('/signin')
     }
 

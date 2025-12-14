@@ -21,12 +21,13 @@ import AdminCommunicationsPage from './pages/admin/Communications'
 import AdminAnalyticsPage from './pages/admin/Analytics'
 import AdminSettingsPage from './pages/admin/Settings'
 import AuthGuard from './components/AuthGuard'
+import LandingPage from './components/LandingPage'
 
 export default function AppRoutes() {
     return (
         <BrowserRouter>
             <Routes>
-                <Route path="/" element={<Navigate to="/signin" replace />} />
+                <Route path="/" element={<LandingPage />} />
                 <Route path="/signin" element={<AppWithSupabase initialTab={"signin"} />} />
                 <Route path="/signup" element={<AppWithSupabase initialTab={"signup"} />} />
                 <Route path="/forgot" element={<AppWithSupabase initialTab={"signin"} />} />
@@ -54,7 +55,7 @@ export default function AppRoutes() {
                 <Route path="/admin/communications" element={<AuthGuard><AdminCommunicationsPage /></AuthGuard>} />
                 <Route path="/admin/analytics" element={<AuthGuard><AdminAnalyticsPage /></AuthGuard>} />
                 <Route path="/admin/settings" element={<AuthGuard><AdminSettingsPage /></AuthGuard>} />
-                <Route path="*" element={<Navigate to="/signin" replace />} />
+                <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
         </BrowserRouter>
     )

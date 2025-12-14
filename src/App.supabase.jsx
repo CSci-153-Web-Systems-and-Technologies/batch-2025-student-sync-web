@@ -155,12 +155,37 @@ function AppWithSupabase({ initialTab = 'signin' }) {
     // Fetch user role from database
     React.useEffect(() => {
         if (user) {
-            // Fetch user profile to get role
-            import('./supabase').then(({ users }) => {
-                users.getProfile(user.id).then(({ data, error }) => {
+            // Fetch user profile to get role. If missing (OAuth first-time sign-in),
+            // upsert a profile using auth user metadata so the app can route immediately.
+            import('./supabase').then(({ users, supabase }) => {
+                users.getProfile(user.id).then(async ({ data, error }) => {
                     if (data) {
                         setUserRole(data.role)
+                        return
                     }
+
+                    // No profile found: build a profile from auth user info / metadata
+                    const meta = user.user_metadata || {}
+                    const metaRole = (meta && (meta.role || meta.user_role))
+                    const role = metaRole ? String(metaRole).toLowerCase() : 'student'
+
+                    const profile = {
+                        id: user.id,
+                        email: user.email || '',
+                        first_name: meta.first_name || meta.full_name || '',
+                        last_name: meta.last_name || '',
+                        role: role,
+                        status: 'active'
+                    }
+
+                    try {
+                        const { error: upsertErr } = await supabase.from('users').upsert(profile, { onConflict: ['id'] })
+                        if (upsertErr) console.warn('Profile upsert failed:', upsertErr)
+                    } catch (e) {
+                        console.error('Error upserting profile:', e)
+                    }
+
+                    setUserRole(role)
                 })
             })
         }
