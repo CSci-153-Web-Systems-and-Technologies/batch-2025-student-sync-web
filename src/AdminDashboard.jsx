@@ -843,6 +843,54 @@ function AnalyticsReports({ students = [], courses = [], faculty = [], programs 
 }
 
 function Settings() {
+    const [profile, setProfile] = useState({ firstName: 'Admin', lastName: 'User', email: 'admin@university.edu' })
+    const [institution, setInstitution] = useState({ name: 'University of Excellence', address: '123 University Ave, Education City', address2: '456 Academic Blvd, Knowledge City', emailDomain: '@university.edu' })
+    const [notifications, setNotifications] = useState(() => ({
+        emailNotifications: JSON.parse(localStorage.getItem('settings:emailNotifications') || 'true'),
+        registrationAlerts: JSON.parse(localStorage.getItem('settings:registrationAlerts') || 'true'),
+        maintenanceAlerts: JSON.parse(localStorage.getItem('settings:maintenanceAlerts') || 'true'),
+        securityAlerts: JSON.parse(localStorage.getItem('settings:securityAlerts') || 'true')
+    }))
+    const [academicSettings, setAcademicSettings] = useState(() => ({
+        currentAcademicYear: localStorage.getItem('settings:currentAcademicYear') || 'Fall 2025',
+        currentSemester: localStorage.getItem('settings:currentSemester') || 'Fall 2025',
+        registrationStartDate: localStorage.getItem('settings:registrationStartDate') || '',
+        semesterStartDate: localStorage.getItem('settings:semesterStartDate') || '2025-08-15'
+    }))
+
+    const handleChangePassword = async () => {
+        const email = profile.email || prompt('Enter admin email to send password reset:')
+        if (!email) return
+        try {
+            const { data, error } = await apiAuth.sendPasswordReset(email)
+            if (error) throw error
+            alert('Password reset email sent to ' + email)
+        } catch (err) {
+            alert('Failed to send password reset: ' + (err.message || err))
+        }
+    }
+
+    const handleUpdateInstitution = () => {
+        // Persist to localStorage as demo persistence
+        localStorage.setItem('settings:institution', JSON.stringify(institution))
+        alert('Institution settings saved')
+    }
+
+    const toggleNotification = (key) => {
+        setNotifications(n => {
+            const next = { ...n, [key]: !n[key] }
+            localStorage.setItem(`settings:${key}`, JSON.stringify(next[key]))
+            return next
+        })
+    }
+
+    const handleUpdateAcademicSettings = () => {
+        Object.keys(academicSettings).forEach(k => localStorage.setItem(`settings:${k}`, academicSettings[k] || ''))
+        alert('Academic settings updated')
+    }
+
+    const handleDangerAction = (name) => () => alert(name + ' is not available in this demo')
+
     return (
         <div className={styles.contentSection}>
             <h3>⚙️ Settings</h3>
@@ -854,21 +902,21 @@ function Settings() {
                     <p className={styles.settingsMuted}>Manage your administrator account and preferences</p>
                     <div className={styles.formGroup}>
                         <label>First Name</label>
-                        <input type="text" defaultValue="Admin" className={styles.input} />
+                        <input type="text" value={profile.firstName} onChange={e => setProfile(p => ({ ...p, firstName: e.target.value }))} className={styles.input} />
                     </div>
                     <div className={styles.formGroup}>
                         <label>Last Name</label>
-                        <input type="text" defaultValue="User" className={styles.input} />
+                        <input type="text" value={profile.lastName} onChange={e => setProfile(p => ({ ...p, lastName: e.target.value }))} className={styles.input} />
                     </div>
                     <div className={styles.formGroup}>
                         <label>Email</label>
-                        <input type="email" defaultValue="admin@university.edu" className={styles.input} />
+                        <input type="email" value={profile.email} onChange={e => setProfile(p => ({ ...p, email: e.target.value }))} className={styles.input} />
                     </div>
                     <div className={styles.formGroup}>
                         <label>Role</label>
                         <input type="text" defaultValue="System Administrator" className={styles.input} disabled />
                     </div>
-                    <button className={styles.primaryBtn}>💾 Change Password</button>
+                    <button className={styles.primaryBtn} onClick={handleChangePassword}>💾 Change Password</button>
                 </div>
 
                 <div className={styles.settingsCard}>
@@ -876,21 +924,21 @@ function Settings() {
                     <p className={styles.settingsMuted}>Update institution details and settings</p>
                     <div className={styles.formGroup}>
                         <label>Institution Name</label>
-                        <input type="text" defaultValue="University of Excellence" className={styles.input} />
+                        <input type="text" value={institution.name} onChange={e => setInstitution(i => ({ ...i, name: e.target.value }))} className={styles.input} />
                     </div>
                     <div className={styles.formGroup}>
                         <label>Institution Address</label>
-                        <input type="text" defaultValue="123 University Ave, Education City" className={styles.input} />
+                        <input type="text" value={institution.address} onChange={e => setInstitution(i => ({ ...i, address: e.target.value }))} className={styles.input} />
                     </div>
                     <div className={styles.formGroup}>
                         <label>Address</label>
-                        <input type="text" defaultValue="456 Academic Blvd, Knowledge City" className={styles.input} />
+                        <input type="text" value={institution.address2} onChange={e => setInstitution(i => ({ ...i, address2: e.target.value }))} className={styles.input} />
                     </div>
                     <div className={styles.formGroup}>
                         <label>Email Domain</label>
-                        <input type="text" defaultValue="@university.edu" className={styles.input} />
+                        <input type="text" value={institution.emailDomain} onChange={e => setInstitution(i => ({ ...i, emailDomain: e.target.value }))} className={styles.input} />
                     </div>
-                    <button className={styles.primaryBtn}>💾 Update Institution Info</button>
+                    <button className={styles.primaryBtn} onClick={handleUpdateInstitution}>💾 Update Institution Info</button>
                 </div>
             </div>
 
@@ -902,28 +950,28 @@ function Settings() {
                         <div className={styles.toggleItem}>
                             <span>Email Notifications</span>
                             <label className={styles.toggle}>
-                                <input type="checkbox" defaultChecked />
+                                <input type="checkbox" checked={!!notifications.emailNotifications} onChange={() => toggleNotification('emailNotifications')} />
                                 <span className={styles.slider}></span>
                             </label>
                         </div>
                         <div className={styles.toggleItem}>
                             <span>Student Registration Alerts</span>
                             <label className={styles.toggle}>
-                                <input type="checkbox" defaultChecked />
+                                <input type="checkbox" checked={!!notifications.registrationAlerts} onChange={() => toggleNotification('registrationAlerts')} />
                                 <span className={styles.slider}></span>
                             </label>
                         </div>
                         <div className={styles.toggleItem}>
                             <span>System Maintenance Alerts</span>
                             <label className={styles.toggle}>
-                                <input type="checkbox" defaultChecked />
+                                <input type="checkbox" checked={!!notifications.maintenanceAlerts} onChange={() => toggleNotification('maintenanceAlerts')} />
                                 <span className={styles.slider}></span>
                             </label>
                         </div>
                         <div className={styles.toggleItem}>
                             <span>Security Alerts</span>
                             <label className={styles.toggle}>
-                                <input type="checkbox" defaultChecked />
+                                <input type="checkbox" checked={!!notifications.securityAlerts} onChange={() => toggleNotification('securityAlerts')} />
                                 <span className={styles.slider}></span>
                             </label>
                         </div>
@@ -935,27 +983,27 @@ function Settings() {
                     <p className={styles.settingsMuted}>Manage academic terms and schedule settings</p>
                     <div className={styles.formGroup}>
                         <label>Current Academic Year</label>
-                        <select className={styles.select}>
+                        <select className={styles.select} value={academicSettings.currentAcademicYear} onChange={e => setAcademicSettings(a => ({ ...a, currentAcademicYear: e.target.value }))}>
                             <option>Fall 2025</option>
                             <option>Spring 2026</option>
                         </select>
                     </div>
                     <div className={styles.formGroup}>
                         <label>Current Semester</label>
-                        <select className={styles.select}>
+                        <select className={styles.select} value={academicSettings.currentSemester} onChange={e => setAcademicSettings(a => ({ ...a, currentSemester: e.target.value }))}>
                             <option>Fall 2025</option>
                             <option>Spring 2026</option>
                         </select>
                     </div>
                     <div className={styles.formGroup}>
                         <label>Registration Start Date</label>
-                        <input type="date" className={styles.input} />
+                        <input type="date" className={styles.input} value={academicSettings.registrationStartDate} onChange={e => setAcademicSettings(a => ({ ...a, registrationStartDate: e.target.value }))} />
                     </div>
                     <div className={styles.formGroup}>
                         <label>Semester Start Date</label>
-                        <input type="date" defaultValue="2025-08-15" className={styles.input} />
+                        <input type="date" defaultValue="2025-08-15" className={styles.input} value={academicSettings.semesterStartDate} onChange={e => setAcademicSettings(a => ({ ...a, semesterStartDate: e.target.value }))} />
                     </div>
-                    <button className={styles.primaryBtn}>💾 Update Academic Settings</button>
+                    <button className={styles.primaryBtn} onClick={handleUpdateAcademicSettings}>💾 Update Academic Settings</button>
                 </div>
             </div>
 
@@ -963,10 +1011,10 @@ function Settings() {
                 <h4>⚠️ Advanced Configuration</h4>
                 <p className={styles.settingsMuted}>Advanced system configuration for experienced administrators</p>
                 <div className={styles.dangerActions}>
-                    <button className={styles.dangerBtn}>🔧 System Configuration</button>
-                    <button className={styles.dangerBtn}>🎓 Academic Settings</button>
-                    <button className={styles.dangerBtn}>🔐 Security Configuration</button>
-                    <button className={styles.dangerBtn}>🛡️ System Audit Settings</button>
+                    <button className={styles.dangerBtn} onClick={handleDangerAction('System Configuration')}>🔧 System Configuration</button>
+                    <button className={styles.dangerBtn} onClick={handleDangerAction('Academic Settings')}>🎓 Academic Settings</button>
+                    <button className={styles.dangerBtn} onClick={handleDangerAction('Security Configuration')}>🔐 Security Configuration</button>
+                    <button className={styles.dangerBtn} onClick={handleDangerAction('System Audit Settings')}>🛡️ System Audit Settings</button>
                 </div>
             </div>
         </div>
