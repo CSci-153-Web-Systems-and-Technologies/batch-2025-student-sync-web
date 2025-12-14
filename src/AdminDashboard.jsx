@@ -244,7 +244,55 @@ function DegreePrograms({ programs = [] }) {
 
 function CourseManagement({ courses = [] }) {
     // replaced prompt-based add with top-level form via onOpenAdd
+    const [viewingCourse, setViewingCourse] = React.useState(null)
+    const [editingCourse, setEditingCourse] = React.useState(null)
+    const [savingCourse, setSavingCourse] = React.useState(false)
 
+    const viewCourse = async (course) => {
+        // open a simple details modal; could fetch more data if needed
+        setViewingCourse(course)
+    }
+
+    const closeViewCourse = () => setViewingCourse(null)
+
+    const startEditCourse = (course) => setEditingCourse({ ...course })
+    const cancelEditCourse = () => setEditingCourse(null)
+
+    const saveCourseEdit = async () => {
+        if (!editingCourse || !editingCourse.id) return
+        setSavingCourse(true)
+        try {
+            const updates = {
+                name: editingCourse.name,
+                code: editingCourse.code,
+                credits: editingCourse.credits || editingCourse.credit_hours,
+                department: editingCourse.dept || editingCourse.department,
+                coordinator: editingCourse.coordinator
+            }
+            const { data, error } = await apiCourses.updateCourse(editingCourse.id, updates)
+            if (error) throw error
+            alert('Course updated')
+            setEditingCourse(null)
+            window.location.reload()
+        } catch (e) {
+            alert('Failed updating course: ' + (e.message || e))
+        } finally {
+            setSavingCourse(false)
+        }
+    }
+
+    const deleteCourse = async (course) => {
+        if (!course || !course.id) return
+        if (!confirm('Deactivate this course? This will hide it from listings.')) return
+        try {
+            const { data, error } = await apiCourses.updateCourse(course.id, { is_active: false })
+            if (error) throw error
+            alert('Course deactivated')
+            window.location.reload()
+        } catch (e) {
+            alert('Failed deactivating course: ' + (e.message || e))
+        }
+    }
 
     return (
         <div className={styles.contentSection}>
@@ -291,9 +339,9 @@ function CourseManagement({ courses = [] }) {
             <div className={styles.searchBox}>
                 <input placeholder="🔍 Search courses..." />
             </div>
-            <div className={styles.programGrid}>
+                <div className={styles.programGrid}>
                 {(courses || []).map((course, i) => (
-                    <div key={i} className={styles.programCard}>
+                    <div key={course.id || i} className={styles.programCard}>
                         <h4>{course.name}</h4>
                         <div className={styles.programDegree}>{course.degree}</div>
                         <div className={styles.programDetails}>
@@ -305,10 +353,54 @@ function CourseManagement({ courses = [] }) {
                         <div className={styles.progressBar}>
                             <div className={styles.progressFill} style={{ width: `${course.fillPercent || 0}%` }}></div>
                         </div>
-                        <button className={styles.viewBtn}>View Course Detail</button>
+                        <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
+                            <button className={styles.viewBtn} onClick={() => viewCourse(course)}>View Details</button>
+                            <button className={styles.actionBtnSecondary} onClick={() => startEditCourse(course)}>✏️ Edit</button>
+                            <button className={styles.dangerBtn} onClick={() => deleteCourse(course)}>🗑️ Delete</button>
+                        </div>
                     </div>
                 ))}
             </div>
+
+            {viewingCourse && (
+                <div className={styles.addOverlay} role="dialog" aria-modal="true">
+                    <div className={styles.addCard} style={{ maxWidth: 700 }}>
+                        <div className={styles.addHeader}>
+                            <h3>Course Details — {viewingCourse.name}</h3>
+                            <button className={styles.closeBtn} onClick={closeViewCourse} aria-label="Close">✖</button>
+                        </div>
+                        <div style={{ padding: 12 }}>
+                            <div className={styles.formRow}><strong>Code:</strong> {viewingCourse.code || viewingCourse.id}</div>
+                            <div className={styles.formRow}><strong>Department:</strong> {viewingCourse.dept || viewingCourse.department || '—'}</div>
+                            <div className={styles.formRow}><strong>Credits:</strong> {viewingCourse.credits || viewingCourse.credit_hours || '—'}</div>
+                            <div className={styles.formRow}><strong>Coordinator:</strong> {viewingCourse.coordinator || '—'}</div>
+                            <div className={styles.formRow}><strong>Enrollment:</strong> {viewingCourse.enrollment ?? viewingCourse.enrollment_count ?? '-'}</div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {editingCourse && (
+                <div className={styles.addOverlay} role="dialog" aria-modal="true">
+                    <div className={styles.addCard} style={{ maxWidth: 700 }}>
+                        <div className={styles.addHeader}>
+                            <h3>Edit Course — {editingCourse.name}</h3>
+                            <button className={styles.closeBtn} onClick={cancelEditCourse} aria-label="Close">✖</button>
+                        </div>
+                        <div style={{ padding: 12 }}>
+                            <label className={styles.formRow}>Name<input className={styles.input} value={editingCourse.name || ''} onChange={e => setEditingCourse(c => ({ ...c, name: e.target.value }))} /></label>
+                            <label className={styles.formRow}>Code<input className={styles.input} value={editingCourse.code || ''} onChange={e => setEditingCourse(c => ({ ...c, code: e.target.value }))} /></label>
+                            <label className={styles.formRow}>Department<input className={styles.input} value={editingCourse.dept || editingCourse.department || ''} onChange={e => setEditingCourse(c => ({ ...c, dept: e.target.value, department: e.target.value }))} /></label>
+                            <label className={styles.formRow}>Credits<input className={styles.input} value={editingCourse.credits || editingCourse.credit_hours || ''} onChange={e => setEditingCourse(c => ({ ...c, credits: e.target.value }))} /></label>
+                            <label className={styles.formRow}>Coordinator<input className={styles.input} value={editingCourse.coordinator || ''} onChange={e => setEditingCourse(c => ({ ...c, coordinator: e.target.value }))} /></label>
+                            <div style={{ marginTop: 12, display: 'flex', gap: 8 }}>
+                                <button className={styles.primaryBtn} onClick={saveCourseEdit} disabled={savingCourse}>{savingCourse ? 'Saving…' : 'Save'}</button>
+                                <button className={styles.secondaryBtn} onClick={cancelEditCourse}>Cancel</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     )
 }
