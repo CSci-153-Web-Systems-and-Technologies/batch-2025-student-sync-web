@@ -1,5 +1,9 @@
 import React, { useState, useEffect } from 'react'
-import { useAuth, useStudent, useDegreePrograms, useEnrollments } from './hooks/useSupabase'
+import { NavLink, useLocation } from 'react-router-dom'
+import { useAuth } from './components/useAuth'
+import { useStudent } from './components/useStudent'
+import { useDegreePrograms } from './components/useDegreePrograms'
+import { useEnrollments } from './components/useEnrollments'
 import { users, students } from './supabase'
 import styles from './StudentDashboard.module.css'
 
@@ -47,10 +51,10 @@ function SettingsTab({ user, student }) {
 
     const [officeHours, setOfficeHours] = useState(() => localStorage.getItem('student:officeHours') || '')
 
-    const toggle = (k) => setNotifications(n => { const next = { ...n, [k]: !n[k] }; try { localStorage.setItem(`student:${k}`, JSON.stringify(next[k])) } catch(e){}; return next })
+    const toggle = (k) => setNotifications(n => { const next = { ...n, [k]: !n[k] }; try { localStorage.setItem(`student:${k}`, JSON.stringify(next[k])) } catch (e) { }; return next })
 
     const saveOfficeHours = async () => {
-        try { localStorage.setItem('student:officeHours', officeHours) } catch(e){}
+        try { localStorage.setItem('student:officeHours', officeHours) } catch (e) { }
         // Persist to Supabase student record if available
         try {
             if (student && students && typeof students.updateStudent === 'function') {
@@ -131,11 +135,11 @@ function SettingsTab({ user, student }) {
             <div style={{ display: 'flex', gap: 16 }}>
                 <div style={{ flex: 1 }}>
                     <h4>Notifications</h4>
-                    <label style={{ display:'flex', justifyContent:'space-between', marginBottom:8 }}>
+                    <label style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
                         <span>Email notifications</span>
                         <input type="checkbox" checked={!!notifications.emailNotifications} onChange={() => toggle('emailNotifications')} />
                     </label>
-                    <label style={{ display:'flex', justifyContent:'space-between', marginBottom:8 }}>
+                    <label style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
                         <span>Grade alerts</span>
                         <input type="checkbox" checked={!!notifications.gradeAlerts} onChange={() => toggle('gradeAlerts')} />
                     </label>
@@ -400,11 +404,21 @@ function AcademicInfo({ student, enrollments }) {
     )
 }
 
-function StudentDashboardWithSupabase({ onLogout }) {
-    const [activeTab, setActiveTab] = useState('Overview')
+function StudentDashboardWithSupabase({ onLogout, initialTab }) {
+    const [activeTab, setActiveTab] = useState(initialTab || 'Overview')
     const { user: authUser } = useAuth()
     const { student, loading: studentLoading } = useStudent(authUser?.id)
     const { enrollments, loading: enrollmentsLoading } = useEnrollments(authUser?.id)
+
+    const location = useLocation()
+
+    useEffect(() => {
+        const p = location.pathname || ''
+        if (p.startsWith('/student/profile')) setActiveTab('Profile Management')
+        else if (p.startsWith('/student/academic')) setActiveTab('Academic Info')
+        else if (p.startsWith('/student/settings')) setActiveTab('Settings')
+        else setActiveTab('Overview')
+    }, [location.pathname])
 
     const loading = studentLoading || enrollmentsLoading
 
@@ -439,7 +453,12 @@ function StudentDashboardWithSupabase({ onLogout }) {
                 <p className={styles.subtitle}>
                     Here's what's happening with your courses today
                 </p>
-                <Tabs value={activeTab} onChange={setActiveTab} />
+                <nav className={styles.tabs} aria-label="Student navigation">
+                    <NavLink to="/student/overview" className={({ isActive }) => isActive ? styles.tabActive : styles.tab}>Overview</NavLink>
+                    <NavLink to="/student/profile" className={({ isActive }) => isActive ? styles.tabActive : styles.tab}>Profile Management</NavLink>
+                    <NavLink to="/student/academic" className={({ isActive }) => isActive ? styles.tabActive : styles.tab}>Academic Info</NavLink>
+                    <NavLink to="/student/settings" className={({ isActive }) => isActive ? styles.tabActive : styles.tab}>Settings</NavLink>
+                </nav>
                 <section className={styles.section}>
                     {activeTab === 'Overview' && (
                         <Overview student={student} enrollments={enrollments} />
@@ -467,3 +486,5 @@ function StudentDashboardWithSupabase({ onLogout }) {
 }
 
 export default StudentDashboardWithSupabase
+
+export { Overview, ProfileManagement, AcademicInfo, SettingsTab }

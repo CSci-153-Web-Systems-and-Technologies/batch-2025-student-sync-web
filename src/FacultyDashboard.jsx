@@ -243,8 +243,8 @@ function SettingsTab({ faculty }) {
     )
 }
 
-export default function FacultyDashboard({ onLogout, initialFaculty }) {
-    const [tab, setTab] = useState('Overview')
+export default function FacultyDashboard({ onLogout, initialFaculty, initialTab }) {
+    const [tab, setTab] = useState(initialTab || 'Overview')
     const [rosterOpen, setRosterOpen] = useState(false)
     const [roster, setRoster] = useState([])
     const faculty = initialFaculty || {

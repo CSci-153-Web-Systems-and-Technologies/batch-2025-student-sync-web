@@ -1,5 +1,6 @@
 import React, { useState } from 'react'
-import { useAuth } from './hooks/useSupabase'
+import { useNavigate } from 'react-router-dom'
+import { useAuth } from './components/useAuth'
 import StudentDashboardWithSupabase from './StudentDashboard.supabase'
 import AdminDashboard from './AdminDashboard'
 import FacultyDashboardWithSupabase from './FacultyDashboard.supabase'
@@ -140,8 +141,9 @@ function SignupForm({ onSubmit, loading }) {
     )
 }
 
-function AppWithSupabase() {
-    const [tab, setTab] = useState('signin')
+function AppWithSupabase({ initialTab = 'signin' }) {
+    const navigate = useNavigate()
+    const [tab, setTab] = useState(initialTab)
     const { user, loading, signIn, signUp, signOut, signInWithProvider, sendPasswordReset } = useAuth()
     const [forgotOpen, setForgotOpen] = useState(false)
     const [forgotLoading, setForgotLoading] = useState(false)
@@ -163,6 +165,15 @@ function AppWithSupabase() {
             })
         }
     }, [user])
+
+    // Redirect to role-specific dashboard when authenticated
+    React.useEffect(() => {
+        if (user && userRole) {
+            if (userRole === 'admin') navigate('/admin', { replace: true })
+            else if (userRole === 'student') navigate('/student', { replace: true })
+            else if (userRole === 'faculty') navigate('/faculty', { replace: true })
+        }
+    }, [user, userRole, navigate])
 
     const handleSignIn = async (email, password) => {
         setAuthLoading(true)
@@ -288,8 +299,8 @@ function AppWithSupabase() {
                                 <h2>Make academic life easier</h2>
                                 <p className="muted">Student Sync centralizes registration, announcements, and academic records — fast and secure.</p>
                                 <div className="landing-cta">
-                                    <button className="primary" onClick={() => { setTab('signin'); setError(null) }}>Sign In</button>
-                                    <button className="secondary" onClick={() => { setSignupOpen(true); setError(null) }}>Create Account</button>
+                                    <button className="primary" onClick={() => { navigate('/signin'); setError(null) }}>Sign In</button>
+                                    <button className="secondary" onClick={() => { navigate('/signup'); setError(null) }}>Create Account</button>
                                 </div>
                                 <div style={{ marginTop: 12 }}>
                                     <OAuthButton onClick={handleGoogleSignIn}>Continue with Google</OAuthButton>
@@ -329,7 +340,7 @@ function AppWithSupabase() {
                             <button
                                 className={tab === 'signin' ? 'active' : ''}
                                 onClick={() => {
-                                    setTab('signin')
+                                    navigate('/signin')
                                     setError(null)
                                 }}
                             >
@@ -338,8 +349,7 @@ function AppWithSupabase() {
                             <button
                                 className={tab === 'signup' ? 'active' : ''}
                                 onClick={() => {
-                                    // keep legacy tab behavior, but also allow modal signup
-                                    setTab('signup')
+                                    navigate('/signup')
                                     setError(null)
                                 }}
                             >
