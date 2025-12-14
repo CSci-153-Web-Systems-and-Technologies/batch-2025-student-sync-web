@@ -50,10 +50,10 @@ function SettingsTab({ user, student }) {
 
     const [officeHours, setOfficeHours] = useState(() => localStorage.getItem('student:officeHours') || '')
 
-    const toggle = (k) => setNotifications(n => { const next = { ...n, [k]: !n[k] }; try { localStorage.setItem(`student:${k}`, JSON.stringify(next[k])) } catch(e){}; return next })
+    const toggle = (k) => setNotifications(n => { const next = { ...n, [k]: !n[k] }; try { localStorage.setItem(`student:${k}`, JSON.stringify(next[k])) } catch (e) { }; return next })
 
     const saveOfficeHours = async () => {
-        try { localStorage.setItem('student:officeHours', officeHours) } catch(e){}
+        try { localStorage.setItem('student:officeHours', officeHours) } catch (e) { }
         // Persist to Supabase student record if available
         try {
             if (student && students && typeof students.updateStudent === 'function') {
@@ -134,11 +134,11 @@ function SettingsTab({ user, student }) {
             <div style={{ display: 'flex', gap: 16 }}>
                 <div style={{ flex: 1 }}>
                     <h4>Notifications</h4>
-                    <label style={{ display:'flex', justifyContent:'space-between', marginBottom:8 }}>
+                    <label style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
                         <span>Email notifications</span>
                         <input type="checkbox" checked={!!notifications.emailNotifications} onChange={() => toggle('emailNotifications')} />
                     </label>
-                    <label style={{ display:'flex', justifyContent:'space-between', marginBottom:8 }}>
+                    <label style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
                         <span>Grade alerts</span>
                         <input type="checkbox" checked={!!notifications.gradeAlerts} onChange={() => toggle('gradeAlerts')} />
                     </label>
