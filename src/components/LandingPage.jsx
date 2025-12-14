@@ -19,6 +19,14 @@ export default function LandingPage({ onAuth }) {
     const handleSubmit = (e) => {
         e.preventDefault()
         if (typeof onAuth === 'function') onAuth(loginRole)
+        // navigate to the appropriate auth route after submit
+        if (tab === 'login') navigate('/signin')
+        else navigate('/signup')
+    }
+
+    const handleGoogle = () => {
+        // placeholder for Google OAuth flow; route to sign-in for now
+        navigate('/signin')
     }
 
     return (
@@ -30,8 +38,8 @@ export default function LandingPage({ onAuth }) {
                     <div className="subtitle">Student ID & Profile Management</div>
                 </div>
                 <div className="tabs">
-                    <button className={tab === 'login' ? 'active' : ''} onClick={() => navigate('/signin')}>Login</button>
-                    <button className={tab === 'signup' ? 'active' : ''} onClick={() => navigate('/signup')}>Sign up</button>
+                    <button className={tab === 'login' ? 'active' : ''} onClick={() => { setTab('login'); navigate('/signin') }}>Login</button>
+                    <button className={tab === 'signup' ? 'active' : ''} onClick={() => { setTab('signup'); navigate('/signup') }}>Sign up</button>
                 </div>
 
                 {tab === 'login' ? (
@@ -48,7 +56,7 @@ export default function LandingPage({ onAuth }) {
                         <button type="submit" className="primary">Sign in</button>
                         <div className="muted"><button type="button" className="link" onClick={() => navigate('/forgot')}>Forgot your password?</button></div>
                         <div className="divider"><span>or</span></div>
-                        <button type="button" className="alt" onClick={() => navigate('/signin')}>Continue with Google</button>
+                        <button type="button" className="alt" onClick={handleGoogle}>Continue with Google</button>
                         <label className="agree"><input type="checkbox" /> By continuing, you agree to our Terms of Service and Privacy Policy.</label>
                     </form>
                 ) : (
@@ -66,7 +74,7 @@ export default function LandingPage({ onAuth }) {
                         </div>
                         <button type="submit" className="primary">Sign up</button>
                         <div className="divider"><span>or</span></div>
-                        <button type="button" className="alt" onClick={() => navigate('/signin')}>Continue with Google</button>
+                        <button type="button" className="alt" onClick={handleGoogle}>Continue with Google</button>
                         <label className="agree"><input type="checkbox" /> By continuing, you agree to our Terms of Service and Privacy Policy.</label>
                     </form>
                 )}

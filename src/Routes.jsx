@@ -1,7 +1,6 @@
 import React from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import AppWithSupabase from './App.supabase'
-import LandingPage from './components/LandingPage'
 import StudentDashboardWithSupabase from './StudentDashboard.supabase'
 import FacultyDashboardWithSupabase from './FacultyDashboard.supabase'
 import AdminDashboard from './AdminDashboard'
@@ -27,8 +26,7 @@ export default function AppRoutes() {
     return (
         <BrowserRouter>
             <Routes>
-                <Route path="/" element={<LandingPage />} />
-                <Route path="/landing" element={<LandingPage />} />
+                <Route path="/" element={<Navigate to="/signin" replace />} />
                 <Route path="/signin" element={<AppWithSupabase initialTab={"signin"} />} />
                 <Route path="/signup" element={<AppWithSupabase initialTab={"signup"} />} />
                 <Route path="/forgot" element={<AppWithSupabase initialTab={"signin"} />} />
@@ -56,7 +54,7 @@ export default function AppRoutes() {
                 <Route path="/admin/communications" element={<AuthGuard><AdminCommunicationsPage /></AuthGuard>} />
                 <Route path="/admin/analytics" element={<AuthGuard><AdminAnalyticsPage /></AuthGuard>} />
                 <Route path="/admin/settings" element={<AuthGuard><AdminSettingsPage /></AuthGuard>} />
-                <Route path="*" element={<Navigate to="/" replace />} />
+                <Route path="*" element={<Navigate to="/signin" replace />} />
             </Routes>
         </BrowserRouter>
     )

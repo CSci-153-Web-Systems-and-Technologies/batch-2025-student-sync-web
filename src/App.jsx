@@ -1,7 +1,7 @@
 import React, { useState } from 'react'
 import StudentDashboard from './StudentDashboard'
 import AdminDashboard from './AdminDashboard'
-import LandingPage from './components/LandingPage'
+import AppWithSupabase from './App.supabase'
 
 function Field({ label, placeholder, type = 'text', value, onChange }) {
     return (
@@ -31,6 +31,6 @@ export default function App() {
     }
 
     return (
-        <LandingPage onAuth={(role) => { setUserRole(role); setSignedIn(true); }} />
+        <AppWithSupabase />
     )
 }
