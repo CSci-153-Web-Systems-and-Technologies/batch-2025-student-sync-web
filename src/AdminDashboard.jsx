@@ -566,6 +566,42 @@ function FacultyManagement({ faculty = [] }) {
         setSelectedSectionIds([])
     }
 
+    const _openEdit = (f) => { console.log('openEdit clicked', f && (f.id || (f.user && `${f.user.first_name || ''} ${f.user.last_name || ''}`))); return openEdit(f) }
+
+    const [viewingSchedule, setViewingSchedule] = React.useState(null)
+    const _viewSchedule = (f) => { console.log('viewSchedule clicked', f && (f.id || (f.user && `${f.user.first_name || ''} ${f.user.last_name || ''}`))); return viewSchedule(f) }
+    const viewSchedule = (f) => {
+        setViewingSchedule(f)
+    }
+    const closeSchedule = () => setViewingSchedule(null)
+
+    const deactivateFaculty = async (f) => {
+        console.log('deactivateFaculty clicked', f && (f.id || f.user?.email))
+        if (!f || !f.id) return
+        if (!confirm('Deactivate this faculty member?')) return
+        try {
+            const { data, error } = await apiFaculty.updateFaculty(f.id, { is_active: false })
+            if (error) throw error
+            alert('Faculty deactivated')
+            window.location.reload()
+        } catch (e) {
+            alert('Failed deactivating faculty: ' + (e.message || e))
+        }
+    }
+
+    const reactivateFaculty = async (f) => {
+        console.log('reactivateFaculty clicked', f && (f.id || f.user?.email))
+        if (!f || !f.id) return
+        try {
+            const { data, error } = await apiFaculty.updateFaculty(f.id, { is_active: true })
+            if (error) throw error
+            alert('Faculty reactivated')
+            window.location.reload()
+        } catch (e) {
+            alert('Failed reactivating faculty: ' + (e.message || e))
+        }
+    }
+
     const toggleSection = (sectionId) => {
         setSelectedSectionIds(prev => prev.includes(sectionId) ? prev.filter(id => id !== sectionId) : [...prev, sectionId])
     }
@@ -689,12 +725,81 @@ function FacultyManagement({ faculty = [] }) {
                             </div>
 
                             <div className={styles.facultyActions}>
-                                <button className={styles.actionBtnSecondary} onClick={() => openEdit(f)}>✏️ Edit Profile</button>
-                                <button className={styles.actionBtnSecondary}>📋 View Schedule</button>
+                                <button className={styles.actionBtnSecondary} onClick={() => _openEdit(f)}>✏️ Edit Profile</button>
+                                <button className={styles.actionBtnSecondary} onClick={() => _viewSchedule(f)}>📋 View Schedule</button>
+                                {f.is_active === false ? (
+                                    <button className={styles.primaryBtn} onClick={() => reactivateFaculty(f)}>↺ Reactivate</button>
+                                ) : (
+                                    <button className={styles.dangerBtn} onClick={() => deactivateFaculty(f)}>🗑️ Deactivate</button>
+                                )}
                             </div>
                         </div>
                     )
                 })}
+
+            {viewingSchedule && (
+                <div className={styles.addOverlay} role="dialog" aria-modal="true">
+                    <div className={styles.addCard} style={{ maxWidth: 700 }}>
+                        <div className={styles.addHeader}>
+                            <h3>Schedule — {(viewingSchedule.user ? `${viewingSchedule.user.first_name || ''} ${viewingSchedule.user.last_name || ''}`.trim() : viewingSchedule.name || viewingSchedule.full_name) }</h3>
+                            <button className={styles.closeBtn} onClick={closeSchedule} aria-label="Close">✖</button>
+                        </div>
+                        <div style={{ padding: 12 }}>
+                            <p className={styles.muted}>Assigned courses and sections</p>
+                            <div style={{ maxHeight: 360, overflowY: 'auto' }}>
+                                {(viewingSchedule.courses || viewingSchedule.coursesTeaching || []).length === 0 ? <div className={styles.muted}>No assigned courses found.</div> : (
+                                    (viewingSchedule.courses || viewingSchedule.coursesTeaching || []).map((c, idx) => (
+                                        <div key={idx} style={{ padding: 8, borderBottom: '1px solid #eee' }}>
+                                            <strong>{c.name || c.code || c}</strong>
+                                            <div style={{ fontSize: 13, color: '#666' }}>{c.section || c.section_code || ''} — {c.schedule || c.time || ''}</div>
+                                        </div>
+                                    ))
+                                )}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {editingFaculty && (
+                <div className={styles.addOverlay} role="dialog" aria-modal="true">
+                    <div className={styles.addCard} style={{ maxWidth: 900 }}>
+                        <div className={styles.addHeader}>
+                            <h3>Edit Faculty — {(editingFaculty.user ? `${editingFaculty.user.first_name || ''} ${editingFaculty.user.last_name || ''}`.trim() : editingFaculty.name || editingFaculty.full_name)}</h3>
+                            <button className={styles.closeBtn} onClick={closeEdit} aria-label="Close">✖</button>
+                        </div>
+                        <div style={{ padding: 12 }}>
+                            <div style={{ display: 'flex', gap: 12 }}>
+                                <div style={{ flex: 1 }}>
+                                    <label className={styles.formRow}>First name<input className={styles.input} value={editingFaculty.user?.first_name || editingFaculty.first_name || ''} onChange={e => setEditingFaculty(f => ({ ...f, user: { ...(f.user||{}), first_name: e.target.value } }))} /></label>
+                                    <label className={styles.formRow}>Last name<input className={styles.input} value={editingFaculty.user?.last_name || editingFaculty.last_name || ''} onChange={e => setEditingFaculty(f => ({ ...f, user: { ...(f.user||{}), last_name: e.target.value } }))} /></label>
+                                    <label className={styles.formRow}>Email<input className={styles.input} value={editingFaculty.user?.email || editingFaculty.email || ''} onChange={e => setEditingFaculty(f => ({ ...f, user: { ...(f.user||{}), email: e.target.value } }))} /></label>
+                                    <label className={styles.formRow}>Phone<input className={styles.input} value={editingFaculty.user?.phone || editingFaculty.phone || ''} onChange={e => setEditingFaculty(f => ({ ...f, user: { ...(f.user||{}), phone: e.target.value } }))} /></label>
+                                    <label className={styles.formRow}>Title<input className={styles.input} value={editingFaculty.title || ''} onChange={e => setEditingFaculty(f => ({ ...f, title: e.target.value }))} /></label>
+                                    <label className={styles.formRow}>Department<input className={styles.input} value={editingFaculty.department || ''} onChange={e => setEditingFaculty(f => ({ ...f, department: e.target.value }))} /></label>
+                                </div>
+                                <div style={{ width: 340 }}>
+                                    <h4>Assign Sections</h4>
+                                    {loadingSections ? <div>Loading sections…</div> : (
+                                        <div style={{ maxHeight: 320, overflowY: 'auto' }}>
+                                            {(sections || []).map(s => (
+                                                <label key={s.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: 6 }}>
+                                                    <input type="checkbox" checked={selectedSectionIds.includes(s.id)} onChange={() => toggleSection(s.id)} />
+                                                    <div style={{ fontSize: 13 }}><strong>{s.course_name || s.name || s.course}</strong><div style={{ color: '#666' }}>{s.section_code || s.code || ''} — {s.schedule || s.time || ''}</div></div>
+                                                </label>
+                                            ))}
+                                        </div>
+                                    )}
+                                    <div style={{ marginTop: 12, display: 'flex', gap: 8 }}>
+                                        <button className={styles.primaryBtn} onClick={saveFacultyAssignments} disabled={savingFaculty}>{savingFaculty ? 'Saving…' : 'Save Assignments'}</button>
+                                        <button className={styles.secondaryBtn} onClick={closeEdit}>Cancel</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
             </div>
         </div>
     )
